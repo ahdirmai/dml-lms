@@ -7,6 +7,9 @@ use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\PermissionsController;
 
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\TagController;
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -39,7 +42,6 @@ Route::middleware(['auth', 'role.active:admin'])->group(function () {
         'destroy' => 'admin.users.destroy',
     ]);
 });
-// routes/web.php
 
 
 Route::middleware(['auth', 'role.active:admin'])->group(function () {
@@ -64,6 +66,14 @@ Route::middleware(['auth', 'role.active:admin'])->group(function () {
         'destroy' => 'admin.permissions.destroy',
         'show'    => 'admin.permissions.show',
     ])->except(['show']);
+});
+
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::prefix('admin')->name('admin.')->middleware(['role.active:admin'])->group(function () {
+        Route::resource('categories', CategoryController::class)->except(['show']);
+        Route::resource('tags', TagController::class)->except(['show']);
+    });
 });
 
 
