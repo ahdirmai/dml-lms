@@ -1,0 +1,23 @@
+---
+deployment:
+  tasks:
+    - export PROJECT_ROOT=$DEPLOYPATH
+    - echo "Deploy to: $PROJECT_ROOT"
+
+    # 1) Pastikan permission aman
+    - 'find $PROJECT_ROOT/storage -type d -exec chmod 775 {} \;'
+    - 'find $PROJECT_ROOT/bootstrap/cache -type d -exec chmod 775 {} \;'
+
+    # 2) Composer install (gunakan composer cPanel)
+    - 'cd $PROJECT_ROOT && /opt/cpanel/composer/bin/composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader'
+
+    # 3) Generate APP_KEY bila belum ada
+    - 'cd $PROJECT_ROOT && if ! grep -q "^APP_KEY=base64" .env; then php artisan key:generate --force; fi'
+
+    # 4) Optimisasi & migrasi
+    - 'cd $PROJECT_ROOT && php artisan config:cache'
+    - 'cd $PROJECT_ROOT && php artisan route:cache'
+    - 'cd $PROJECT_ROOT && php artisan migrate --force'
+
+    # 5) Storage link (idempotent)
+    - 'cd $PROJECT_ROOT && php artisan storage:link || true'
