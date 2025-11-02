@@ -23,10 +23,19 @@
                         {{ __('Dashboard') }}
                     </x-nav-link>
 
-                    {{-- Tampilkan menu admin jika role aktif admin --}}
+                    {{-- Admin menus --}}
                     @if($activeRole === 'admin')
                     <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
                         {{ __('User Management') }}
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')">
+                        {{ __('Role Management') }}
+                    </x-nav-link>
+
+                    <x-nav-link :href="route('admin.permissions.index')"
+                        :active="request()->routeIs('admin.permissions.*')">
+                        {{ __('Permission Management') }}
                     </x-nav-link>
                     @endif
                 </div>
@@ -154,6 +163,7 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
+            {{-- Dashboard selalu tampil --}}
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
@@ -161,11 +171,19 @@
             {{-- Menu admin (mobile) --}}
             @if($activeRole === 'admin')
             <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
-                {{ __('User Management') }}
+                🧑‍💼 {{ __('User Management') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('admin.roles.index')" :active="request()->routeIs('admin.roles.*')">
+                🧩 {{ __('Role Management') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('admin.permissions.index')"
+                :active="request()->routeIs('admin.permissions.*')">
+                🔐 {{ __('Permission Management') }}
             </x-responsive-nav-link>
             @endif
         </div>
-
         <!-- Responsive Settings Options -->
         <div class="pt-4 pb-1 border-t border-gray-200 dark:border-gray-600">
             <div class="px-4">

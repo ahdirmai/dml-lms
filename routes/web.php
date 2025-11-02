@@ -4,7 +4,8 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoleSwitchController;
 use App\Http\Controllers\Admin\UsersController;
-
+use App\Http\Controllers\Admin\RolesController;
+use App\Http\Controllers\Admin\PermissionsController;
 
 Route::get('/', function () {
     return view('welcome');
@@ -26,6 +27,8 @@ Route::post('/switch-role', [RoleSwitchController::class, 'switch'])
 
 // routes/web.php
 
+
+// admin
 Route::middleware(['auth', 'role.active:admin'])->group(function () {
     Route::resource('admin/users', UsersController::class)->names([
         'index'   => 'admin.users.index',
@@ -36,6 +39,33 @@ Route::middleware(['auth', 'role.active:admin'])->group(function () {
         'destroy' => 'admin.users.destroy',
     ]);
 });
+// routes/web.php
+
+
+Route::middleware(['auth', 'role.active:admin'])->group(function () {
+    // Roles
+    Route::resource('admin/roles', RolesController::class)->names([
+        'index'   => 'admin.roles.index',
+        'create'  => 'admin.roles.create',
+        'store'   => 'admin.roles.store',
+        'edit'    => 'admin.roles.edit',
+        'update'  => 'admin.roles.update',
+        'destroy' => 'admin.roles.destroy',
+        'show'    => 'admin.roles.show',
+    ])->except(['show']); // biasanya show tidak diperlukan
+
+    // Permissions
+    Route::resource('admin/permissions', PermissionsController::class)->names([
+        'index'   => 'admin.permissions.index',
+        'create'  => 'admin.permissions.create',
+        'store'   => 'admin.permissions.store',
+        'edit'    => 'admin.permissions.edit',
+        'update'  => 'admin.permissions.update',
+        'destroy' => 'admin.permissions.destroy',
+        'show'    => 'admin.permissions.show',
+    ])->except(['show']);
+});
+
 
 
 
