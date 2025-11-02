@@ -90,6 +90,7 @@ class UsersController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
             'roles'    => ['nullable', 'array'],
             'roles.*'  => ['string', Rule::exists('roles', 'name')],
+            'active_role' => ['nullable', Rule::in($request->input('roles', []))],
         ]);
 
         $user->name  = $data['name'];
@@ -99,6 +100,8 @@ class UsersController extends Controller
         }
         $user->save();
 
+
+
         // Role sync (tetap pastikan student ada)
         $assignRoles = collect($data['roles'] ?? [])->filter()->values()->all();
         if (! in_array('student', $assignRoles, true)) {
@@ -106,10 +109,21 @@ class UsersController extends Controller
         }
         $user->syncRoles($assignRoles);
 
+
+
         // Pastikan active_role tetap valid
-        if ($user->active_role && ! in_array($user->active_role, $assignRoles, true)) {
-            $user->active_role = $assignRoles[0] ?? 'student';
-            $user->save();
+        if ($request->filled('active_role')) {
+            $ar = $request->string('active_role');
+            // hanya simpan jika termasuk dalam roles yang dipilih
+            $selectedRoles = collect($request->input('roles', []))->filter()->values();
+            if ($selectedRoles->contains($ar)) {
+                $user->active_role = $ar;
+                $user->save();
+            } else {
+                // jika tidak konsisten, kamu bisa fallback ke null/abaikan:
+                $user->active_role = null;
+                $user->save();
+            }
         }
 
         return redirect()->route('admin.users.index')->with('success', 'User updated.');

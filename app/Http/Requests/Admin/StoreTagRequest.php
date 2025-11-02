@@ -8,7 +8,8 @@ class StoreTagRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage tags') ?? false;
+        $u = $this->user();
+        return $u && (($u->active_role === 'admin') || $u->can('categories.manage'));
     }
     public function rules(): array
     {

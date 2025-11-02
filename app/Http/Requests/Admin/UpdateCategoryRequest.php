@@ -9,8 +9,11 @@ class UpdateCategoryRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage categories') ?? false;
+        $u = $this->user();
+        // lolos jika role aktif admin ATAU punya permission manage categories
+        return $u && (($u->active_role === 'admin') || $u->can('categories.manage'));
     }
+
     public function rules(): array
     {
         $id = $this->route('category')->id ?? null;

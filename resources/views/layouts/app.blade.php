@@ -17,55 +17,43 @@
     $roleNames = $me?->getRoleNames() ?? collect();
     $activeRole = $me?->active_role ?? $roleNames->first();
 
-    $sidebarItems = [
-    [
+    $sidebarItems = [[
     'label' => 'Dashboard',
     'icon' => 'home',
     'href' => route('dashboard'),
     'active' => request()->routeIs('dashboard'),
-    ],
-    ];
+    ]];
 
     if ($activeRole === 'admin') {
     $sidebarItems = array_merge($sidebarItems, [
-    [
-    'label' => 'User Management',
-    'icon' => 'users',
-    'href' => route('admin.users.index'),
-    'active' => request()->routeIs('admin.users.*'),
-    ],
-    [
-    'label' => 'Role Management',
-    'icon' => 'shield-check',
-    'href' => route('admin.roles.index'),
-    'active' => request()->routeIs('admin.roles.*'),
-    ],
-    [
-    'label' => 'Permission Management',
-    'icon' => 'key-square',
-    'href' => route('admin.permissions.index'),
-    'active' => request()->routeIs('admin.permissions.*'),
-    ],
-    // ✨ Tambahan baru
-    [
-    'label' => 'Categories',
-    'icon' => 'folder',
-    'href' => route('admin.categories.index'),
-    'active' => request()->routeIs('admin.categories.*'),
-    ],
-    [
-    'label' => 'Tags',
-    'icon' => 'tag',
-    'href' => route('admin.tags.index'),
-    'active' => request()->routeIs('admin.tags.*'),
-    ],
+    ['label' => 'User Management', 'icon' => 'users', 'href' => route('admin.users.index'), 'active' =>
+    request()->routeIs('admin.users.*')],
+    ['label' => 'Role Management', 'icon' => 'shield-check', 'href' => route('admin.roles.index'), 'active' =>
+    request()->routeIs('admin.roles.*')],
+    ['label' => 'Permission Management','icon' => 'key-square','href' => route('admin.permissions.index'), 'active' =>
+    request()->routeIs('admin.permissions.*')],
+    ['label' => 'Categories', 'icon' => 'folder', 'href' => route('admin.categories.index'), 'active' =>
+    request()->routeIs('admin.categories.*')],
+    ['label' => 'Tags', 'icon' => 'tag', 'href' => route('admin.tags.index'), 'active' =>
+    request()->routeIs('admin.tags.*')],
     ]);
     }
     @endphp
+
     <div class="flex min-h-screen">
         <x-ui.sidebar :brand="config('app.name')" :items="$sidebarItems" />
+
         <main class="ml-64 flex-1 p-6 lg:p-8">
             <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" />
+
+            @isset($header)
+            <header class="mb-6">
+                <h2 class="text-xl font-semibold text-dark">
+                    {{ $header }}
+                </h2>
+            </header>
+            @endisset
+
             <div class="space-y-8">
                 {{ $slot }}
             </div>

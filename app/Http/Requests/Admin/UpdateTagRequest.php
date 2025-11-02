@@ -9,8 +9,10 @@ class UpdateTagRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('manage tags') ?? false;
+        $u = $this->user();
+        return $u && (($u->active_role === 'admin') || $u->can('tags.manage'));
     }
+
     public function rules(): array
     {
         $id = $this->route('tag')->id ?? null;

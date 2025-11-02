@@ -6,10 +6,17 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCategoryRequest extends FormRequest
 {
+
     public function authorize(): bool
     {
-        return $this->user()?->can('manage categories') ?? false;
+        $u = $this->user();
+        return $u && (($u->active_role === 'admin') || $u->can('categories.manage'));
     }
+
+    // public function authorize(): bool
+    // {
+    //     return $this->user()?->can('manage ') ?? false;
+    // }
     public function rules(): array
     {
         return [

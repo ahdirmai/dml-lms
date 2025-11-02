@@ -33,6 +33,11 @@ class RoleAndPermissionSeeder extends Seeder
             'course.edit',
             'course.delete',
 
+            // Tambahkan di daftar $permissions:
+            'categories.manage',
+            'tags.manage',
+
+
             // Lesson Management
             'lesson.view',
             'lesson.create',
@@ -76,6 +81,8 @@ class RoleAndPermissionSeeder extends Seeder
                 'enrollment.approve',
                 'quiz.manage',
                 'settings.manage',
+                'categories.manage',
+                'tags.manage',
             ],
             'instructor' => [
                 'course.view',

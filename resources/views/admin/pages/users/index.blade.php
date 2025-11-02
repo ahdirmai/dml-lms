@@ -1,9 +1,7 @@
 {{-- resources/views/admin/pages/users/index.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-dark leading-tight">
-            Users Management
-        </h2>
+        <h2 class="font-semibold text-xl text-dark leading-tight">Users Management</h2>
     </x-slot>
 
     <div class="py-6">
