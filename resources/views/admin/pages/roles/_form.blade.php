@@ -1,32 +1,40 @@
-@props(['action', 'method' => 'POST', 'role' => null, 'permissions' => collect(), 'rolePermissions' => []])
-
-<form action="{{ $action }}" method="POST" class="space-y-4">
+{{-- resources/views/admin/pages/roles/_form.blade.php --}}
+<form method="POST" action="{{ $action }}">
     @csrf
-    @if(in_array($method, ['PUT','PATCH','DELETE'])) @method($method) @endif
+    @if(($method ?? 'POST') !== 'POST')
+    @method($method)
+    @endif
 
-    <div>
-        <x-input-label for="name" :value="__('Role Name')" />
-        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-            :value="old('name', $role->name ?? '')" required />
-        <x-input-error :messages="$errors->get('name')" class="mt-2" />
-    </div>
+    <div class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <x-ui.form-field label="Role Name" for="name" required :error="$errors->get('name')">
+                <x-ui.input id="name" name="name" value="{{ old('name', $role->name ?? '') }}"
+                    placeholder="e.g. admin, instructor, student" autofocus />
+            </x-ui.form-field>
 
-    <div>
-        <x-input-label :value="__('Permissions')" />
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mt-2">
-            @foreach($permissions as $perm)
-            <label class="inline-flex items-center gap-2 text-sm">
-                <input type="checkbox" name="permissions[]" value="{{ $perm }}" @checked( in_array($perm,
-                    old('permissions', $rolePermissions ?? [])) ) class="rounded border-gray-300 dark:border-gray-600">
-                <span>{{ $perm }}</span>
-            </label>
-            @endforeach
+            <x-ui.form-field label="Guard Name" for="guard_name" helper="Biasanya 'web'."
+                :error="$errors->get('guard_name')">
+                <x-ui.input id="guard_name" name="guard_name"
+                    value="{{ old('guard_name', $role->guard_name ?? 'web') }}" />
+            </x-ui.form-field>
         </div>
-        <x-input-error :messages="$errors->get('permissions')" class="mt-2" />
-    </div>
 
-    <div class="pt-2 flex items-center gap-2">
-        <x-primary-button type="submit">{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.roles.index') }}" class="px-4 py-2 rounded border">{{ __('Cancel') }}</a>
+        <x-ui.form-field label="Permissions" for="permissions" helper="Pilih satu atau lebih permission untuk role ini."
+            :error="$errors->get('permissions')">
+            <x-ui.select id="permissions" name="permissions[]" multiple size="10">
+                @foreach($permissions as $p)
+                <option value="{{ $p }}" @selected(in_array($p, old('permissions', $rolePermissions ?? [])))>
+                    {{ $p }}
+                </option>
+                @endforeach
+            </x-ui.select>
+        </x-ui.form-field>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+            <x-ui.button as="a" href="{{ route('admin.roles.index') }}" variant="subtle">Cancel</x-ui.button>
+            <x-ui.button type="submit" variant="primary">
+                {{ ($method ?? 'POST') === 'PUT' ? 'Update Role' : 'Create Role' }}
+            </x-ui.button>
+        </div>
     </div>
 </form>

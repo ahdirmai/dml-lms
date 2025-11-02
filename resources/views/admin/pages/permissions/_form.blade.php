@@ -1,18 +1,29 @@
-@props(['action', 'method' => 'POST', 'permission' => null])
-
-<form action="{{ $action }}" method="POST" class="space-y-4">
+{{-- resources/views/admin/pages/permissions/_form.blade.php --}}
+<form method="POST" action="{{ $action }}">
     @csrf
-    @if(in_array($method, ['PUT','PATCH','DELETE'])) @method($method) @endif
+    @if(($method ?? 'POST') !== 'POST')
+    @method($method)
+    @endif
 
-    <div>
-        <x-input-label for="name" :value="__('Permission Name')" />
-        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-            :value="old('name', $permission->name ?? '')" required />
-        <x-input-error :messages="$errors->get('name')" class="mt-2" />
-    </div>
+    <div class="space-y-5">
+        <x-ui.form-field label="Permission Name" for="name" required :error="$errors->get('name')">
+            <x-ui.input id="name" name="name" value="{{ old('name', $permission->name ?? '') }}"
+                placeholder="e.g. edit user, view reports" autofocus />
+        </x-ui.form-field>
 
-    <div class="pt-2 flex items-center gap-2">
-        <x-primary-button type="submit">{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.permissions.index') }}" class="px-4 py-2 rounded border">{{ __('Cancel') }}</a>
+        <x-ui.form-field label="Guard Name" for="guard_name" helper="Usually 'web' or 'api'."
+            :error="$errors->get('guard_name')">
+            <x-ui.input id="guard_name" name="guard_name"
+                value="{{ old('guard_name', $permission->guard_name ?? 'web') }}" />
+        </x-ui.form-field>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+            <x-ui.button as="a" href="{{ route('admin.permissions.index') }}" variant="subtle">
+                Cancel
+            </x-ui.button>
+            <x-ui.button type="submit" variant="primary">
+                {{ ($method ?? 'POST') === 'PUT' ? 'Update Permission' : 'Create Permission' }}
+            </x-ui.button>
+        </div>
     </div>
 </form>

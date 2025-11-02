@@ -1,36 +1,47 @@
+@props(['title' => config('app.name', 'LearnFlow')])
+
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="csrf-token" content="{{ csrf_token() }}">
+<html lang="{{ str_replace('_','-',app()->getLocale()) }}" class="h-full">
 
-        <title>{{ config('app.name', 'Laravel') }}</title>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $title }}</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+</head>
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+<body class="bg-soft min-h-screen antialiased">
+    @php
+    /** @var \App\Models\User|null $me */
+    $me = auth()->user();
+    $roleNames = $me?->getRoleNames() ?? collect();
+    $activeRole = $me?->active_role ?? $roleNames->first();
 
-        <!-- Scripts -->
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-    </head>
-    <body class="font-sans antialiased">
-        <div class="min-h-screen bg-gray-100 dark:bg-gray-900">
-            @include('layouts.navigation')
+    $sidebarItems = [
+    ['label' => 'Dashboard', 'icon' => 'home', 'href' => route('dashboard'), 'active' =>
+    request()->routeIs('dashboard')],
+    ];
+    if ($activeRole === 'admin') {
+    $sidebarItems = array_merge($sidebarItems, [
+    ['label' => 'User Management', 'icon' => 'users', 'href' => route('admin.users.index'), 'active' =>
+    request()->routeIs('admin.users.*')],
+    ['label' => 'Role Management', 'icon' => 'shield-check', 'href' => route('admin.roles.index'), 'active' =>
+    request()->routeIs('admin.roles.*')],
+    ['label' => 'Permission Management', 'icon' => 'key-square', 'href' => route('admin.permissions.index'), 'active' =>
+    request()->routeIs('admin.permissions.*')],
+    ]);
+    }
+    @endphp
 
-            <!-- Page Heading -->
-            @isset($header)
-                <header class="bg-white dark:bg-gray-800 shadow">
-                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-                        {{ $header }}
-                    </div>
-                </header>
-            @endisset
-
-            <!-- Page Content -->
-            <main>
+    <div class="flex min-h-screen">
+        <x-ui.sidebar :brand="config('app.name')" :items="$sidebarItems" />
+        <main class="ml-64 flex-1 p-6 lg:p-8">
+            <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" />
+            <div class="space-y-8">
                 {{ $slot }}
-            </main>
-        </div>
-    </body>
+            </div>
+        </main>
+    </div>
+</body>
+
 </html>

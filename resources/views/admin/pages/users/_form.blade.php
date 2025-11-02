@@ -1,53 +1,74 @@
 {{-- resources/views/admin/pages/users/_form.blade.php --}}
-@props(['action', 'method' => 'POST', 'user' => null, 'roles' => collect(), 'userRoles' => []])
-
-<form action="{{ $action }}" method="POST" class="space-y-4">
+<form method="POST" action="{{ $action }}">
     @csrf
-    @if(in_array($method, ['PUT','PATCH','DELETE']))
+    @if(($method ?? 'POST') !== 'POST')
     @method($method)
     @endif
 
-    <div>
-        <x-input-label for="name" :value="__('Name')" />
-        <x-text-input id="name" name="name" type="text" class="mt-1 block w-full"
-            :value="old('name', $user->name ?? '')" required autofocus />
-        <x-input-error :messages="$errors->get('name')" class="mt-2" />
-    </div>
+    <div class="space-y-5">
 
-    <div>
-        <x-input-label for="email" :value="__('Email')" />
-        <x-text-input id="email" name="email" type="email" class="mt-1 block w-full"
-            :value="old('email', $user->email ?? '')" required />
-        <x-input-error :messages="$errors->get('email')" class="mt-2" />
-    </div>
+        <x-ui.form-field label="Name" for="name" :error="$errors->get('name')" required>
+            <x-ui.input id="name" name="name" value="{{ old('name', $user->name ?? '') }}" />
+        </x-ui.form-field>
 
-    <div>
-        <x-input-label for="password" :value="__('Password')" />
-        <x-text-input id="password" name="password" type="password" class="mt-1 block w-full" @if(!isset($user))
-            required @endif />
-        <p class="mt-1 text-xs text-gray-500">{{ isset($user) ? 'Kosongkan jika tidak ingin mengubah password.' :
-            'Minimal 8 karakter.' }}</p>
-        <x-input-error :messages="$errors->get('password')" class="mt-2" />
-    </div>
+        <x-ui.form-field label="Email" for="email" :error="$errors->get('email')" required>
+            <x-ui.input id="email" type="email" name="email" value="{{ old('email', $user->email ?? '') }}" />
+        </x-ui.form-field>
 
-    <div>
-        <x-input-label for="roles" :value="__('Roles')" />
-        <select id="roles" name="roles[]" multiple
-            class="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
-            @foreach($roles as $r)
-            <option value="{{ $r }}" @selected( in_array($r, old('roles', $userRoles ?? [])) )>
-                {{ Str::headline($r) }}
-            </option>
-            @endforeach
-        </select>
-        <p class="mt-1 text-xs text-gray-500">
-            Bila tidak memilih, sistem tetap menambahkan <b>student</b> secara default.
-        </p>
-        <x-input-error :messages="$errors->get('roles')" class="mt-2" />
-    </div>
+        <x-ui.form-field label="Password" for="password" helper="Biarkan kosong jika tidak ingin mengubah."
+            :error="$errors->get('password')">
+            <x-ui.input id="password" type="password" name="password" autocomplete="new-password" />
+        </x-ui.form-field>
 
-    <div class="pt-2 flex items-center gap-2">
-        <x-primary-button type="submit">{{ __('Save') }}</x-primary-button>
-        <a href="{{ route('admin.users.index') }}" class="px-4 py-2 rounded border">{{ __('Cancel') }}</a>
+        <x-ui.form-field label="Confirm Password" for="password_confirmation"
+            :error="$errors->get('password_confirmation')">
+            <x-ui.input id="password_confirmation" type="password" name="password_confirmation" />
+        </x-ui.form-field>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {{-- Multiple Roles --}}
+            <x-ui.form-field label="Roles" for="roles" helper="Pilih satu atau lebih peran untuk user."
+                :error="$errors->get('roles')">
+                <x-ui.select id="roles" name="roles[]" multiple size="6">
+                    @foreach($roles as $r)
+                    <option value="{{ $r }}" @selected(in_array($r, old('roles', $userRoles ?? [])))>
+                        {{ Str::headline($r) }}
+                    </option>
+                    @endforeach
+                </x-ui.select>
+            </x-ui.form-field>
+
+            {{-- Active Role (opsional) --}}
+            <x-ui.form-field label="Active Role" for="active_role"
+                helper="Peran aktif mempengaruhi menu & akses saat login." :error="$errors->get('active_role')">
+                @php
+                $availableActive = old('roles', $userRoles ?? []);
+                $currentActive = old('active_role', $user->active_role ?? null);
+                @endphp
+                <x-ui.select id="active_role" name="active_role">
+                    <option value="">— None —</option>
+                    @foreach($roles as $r)
+                    @if(in_array($r, $availableActive))
+                    <option value="{{ $r }}" @selected($currentActive===$r)>{{ Str::headline($r) }}</option>
+                    @endif
+                    @endforeach
+                </x-ui.select>
+            </x-ui.form-field>
+        </div>
+
+        {{-- Optional: status aktif, dsb. --}}
+        {{-- <x-ui.form-field>
+            <label class="inline-flex items-center gap-2">
+                <x-ui.checkbox name="is_active" :checked="old('is_active', $user->is_active ?? true)" />
+                <span class="text-sm text-dark">Active</span>
+            </label>
+        </x-ui.form-field> --}}
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+            <x-ui.button as="a" href="{{ route('admin.users.index') }}" variant="subtle">Cancel</x-ui.button>
+            <x-ui.button type="submit" variant="primary">
+                {{ ($method ?? 'POST') === 'PUT' ? 'Update User' : 'Create User' }}
+            </x-ui.button>
+        </div>
     </div>
 </form>

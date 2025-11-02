@@ -1,7 +1,7 @@
 {{-- resources/views/admin/pages/users/index.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
+        <h2 class="font-semibold text-xl text-dark leading-tight">
             Users Management
         </h2>
     </x-slot>
@@ -9,90 +9,110 @@
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
+            {{-- Alerts --}}
             @if (session('success'))
-            <div class="mb-4 p-3 rounded bg-green-100 text-green-800">
+            <x-ui.alert variant="success" class="mb-4">
                 {{ session('success') }}
-            </div>
+            </x-ui.alert>
             @endif
             @if (session('error'))
-            <div class="mb-4 p-3 rounded bg-red-100 text-red-800">
+            <x-ui.alert variant="danger" class="mb-4">
                 {{ session('error') }}
-            </div>
+            </x-ui.alert>
             @endif
 
-            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
-                    <form method="GET" class="flex items-center gap-2">
-                        <input type="text" name="q" value="{{ $q }}" placeholder="Search name/email"
-                            class="w-64 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
-                        <select name="role"
-                            class="rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
+            <div class="bg-white shadow sm:rounded-lg">
+                {{-- Toolbar / Filters --}}
+                <div class="p-4 border-b border-soft flex flex-col md:flex-row md:items-center gap-3 justify-between">
+                    <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <x-ui.input type="text" name="q" value="{{ $q }}" placeholder="Search name/email"
+                            class="w-64" />
+                        <x-ui.select name="role">
                             <option value="">All Roles</option>
                             @foreach($roles as $r)
                             <option value="{{ $r }}" @selected($role===$r)>{{ Str::headline($r) }}</option>
                             @endforeach
-                        </select>
-                        <button class="px-3 py-2 rounded-md bg-indigo-600 text-white">Filter</button>
+                        </x-ui.select>
+                        <x-ui.button type="submit" variant="primary">Filter</x-ui.button>
+                        @if(request()->hasAny(['q','role']) && (filled($q) || filled($role)))
+                        <x-ui.button as="a" href="{{ route('admin.users.index') }}" variant="subtle">Reset</x-ui.button>
+                        @endif
                     </form>
 
-                    <a href="{{ route('admin.users.create') }}" class="px-3 py-2 rounded-md bg-green-600 text-white">+
-                        Create</a>
+                    <x-ui.button as="a" href="{{ route('admin.users.create') }}" variant="primary">
+                        + Create
+                    </x-ui.button>
                 </div>
 
+                {{-- Table --}}
                 <div class="p-4 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead>
-                            <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Roles</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
-                                <th class="px-3 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    <x-ui.table>
+                        <x-ui.thead>
+                            <x-ui.th>ID</x-ui.th>
+                            <x-ui.th>Name</x-ui.th>
+                            <x-ui.th>Email</x-ui.th>
+                            <x-ui.th>Roles</x-ui.th>
+                            <x-ui.th>Active</x-ui.th>
+                            <x-ui.th align="right"></x-ui.th>
+                        </x-ui.thead>
+
+                        <x-ui.tbody>
                             @forelse($users as $u)
-                            <tr>
-                                <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">{{ $u->id }}</td>
-                                <td class="px-3 py-2 text-sm text-gray-700 dark:text-gray-200">{{ $u->name }}</td>
-                                <td class="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">{{ $u->email }}</td>
-                                <td class="px-3 py-2 text-sm">
+                            <x-ui.tr>
+                                <x-ui.td>{{ $u->id }}</x-ui.td>
+
+                                <x-ui.td>
+                                    <div class="text-dark">{{ $u->name }}</div>
+                                </x-ui.td>
+
+                                <x-ui.td>
+                                    <div class="text-sm text-dark/60">{{ $u->email }}</div>
+                                </x-ui.td>
+
+                                <x-ui.td>
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($u->roles as $r)
-                                        <span
-                                            class="inline-flex px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border dark:border-gray-600">
-                                            {{ Str::headline($r->name) }}
-                                        </span>
+                                        <x-ui.badge color="gray">{{ Str::headline($r->name) }}</x-ui.badge>
                                         @endforeach
                                     </div>
-                                </td>
-                                <td class="px-3 py-2 text-sm">
+                                </x-ui.td>
+
+                                <x-ui.td>
                                     @if($u->active_role)
-                                    <span class="inline-flex px-2 py-0.5 text-xs rounded bg-indigo-100 text-indigo-800">
-                                        {{ Str::headline($u->active_role) }}
-                                    </span>
+                                    <x-ui.badge color="brand">{{ Str::headline($u->active_role) }}</x-ui.badge>
                                     @else
-                                    <span class="text-xs text-gray-400">—</span>
+                                    <span class="text-xs text-dark/50">—</span>
                                     @endif
-                                </td>
-                                <td class="px-3 py-2 text-sm text-right">
-                                    <a href="{{ route('admin.users.edit', $u) }}"
-                                        class="px-3 py-1 rounded border text-gray-700 dark:text-gray-200">Edit</a>
+                                </x-ui.td>
+
+                                <x-ui.td align="right">
+                                    <x-ui.button as="a" href="{{ route('admin.users.edit', $u) }}" size="sm"
+                                        variant="outline" class="mr-1">
+                                        Edit
+                                    </x-ui.button>
+
                                     <form action="{{ route('admin.users.destroy', $u) }}" method="POST" class="inline"
                                         onsubmit="return confirm('Delete this user?')">
                                         @csrf @method('DELETE')
-                                        <button class="px-3 py-1 rounded bg-red-600 text-white">Delete</button>
+                                        <x-ui.button type="submit" size="sm" variant="danger">
+                                            Delete
+                                        </x-ui.button>
                                     </form>
-                                </td>
-                            </tr>
+                                </x-ui.td>
+                            </x-ui.tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-500">No data</td>
+                                <td colspan="6">
+                                    <x-ui.empty-state title="No users found"
+                                        subtitle="Coba ubah filter pencarian atau tambah user baru.">
+                                        <x-ui.button as="a" href="{{ route('admin.users.create') }}" variant="primary">
+                                            Create User</x-ui.button>
+                                    </x-ui.empty-state>
+                                </td>
                             </tr>
                             @endforelse
-                        </tbody>
-                    </table>
+                        </x-ui.tbody>
+                    </x-ui.table>
 
                     <div class="mt-4">
                         {{ $users->links() }}

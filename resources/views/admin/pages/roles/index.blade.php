@@ -1,76 +1,96 @@
+{{-- resources/views/admin/pages/roles/index.blade.php --}}
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            Roles
+        <h2 class="font-semibold text-xl text-dark leading-tight">
+            Role Management
         </h2>
     </x-slot>
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
+            {{-- Alerts --}}
             @if (session('success'))
-            <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ session('success') }}</div>
+            <x-ui.alert variant="success" class="mb-4">{{ session('success') }}</x-ui.alert>
             @endif
             @if (session('error'))
-            <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ session('error') }}</div>
+            <x-ui.alert variant="danger" class="mb-4">{{ session('error') }}</x-ui.alert>
             @endif
 
-            <div class="bg-white dark:bg-gray-800 shadow sm:rounded-lg">
-                <div class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between gap-3">
-                    <form method="GET" class="flex items-center gap-2">
-                        <input type="text" name="q" value="{{ $q }}" placeholder="Search role"
-                            class="w-64 rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200">
-                        <button class="px-3 py-2 rounded-md bg-indigo-600 text-white">Filter</button>
+            <div class="bg-white shadow sm:rounded-lg">
+                {{-- Filters / Actions --}}
+                <div
+                    class="p-4 border-b border-soft flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <x-ui.input type="text" name="q" value="{{ $q }}" placeholder="Search role" class="w-64" />
+                        <x-ui.button type="submit" variant="primary">Filter</x-ui.button>
+                        @if(request()->filled('q'))
+                        <x-ui.button as="a" href="{{ route('admin.roles.index') }}" variant="subtle">Reset</x-ui.button>
+                        @endif
                     </form>
 
-                    <a href="{{ route('admin.roles.create') }}" class="px-3 py-2 rounded-md bg-green-600 text-white">+
-                        Create</a>
+                    <x-ui.button as="a" href="{{ route('admin.roles.create') }}" variant="primary">
+                        + Create
+                    </x-ui.button>
                 </div>
 
+                {{-- Table --}}
                 <div class="p-4 overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                        <thead>
-                            <tr>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permissions
-                                </th>
-                                <th class="px-3 py-2"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @forelse($roles as $role)
-                            <tr>
-                                <td class="px-3 py-2 text-sm text-gray-800 dark:text-gray-200">{{ $role->name }}</td>
-                                <td class="px-3 py-2 text-sm">
+                    <x-ui.table>
+                        <x-ui.thead>
+                            <x-ui.th>Name</x-ui.th>
+                            <x-ui.th>Guard</x-ui.th>
+                            <x-ui.th>Permissions</x-ui.th>
+                            <x-ui.th align="right">Action</x-ui.th>
+                        </x-ui.thead>
+
+                        <x-ui.tbody>
+                            @forelse($roles as $r)
+                            <x-ui.tr>
+                                <x-ui.td>
+                                    <span class="font-medium text-dark">{{ $r->name }}</span>
+                                </x-ui.td>
+                                <x-ui.td>
+                                    <span class="text-sm text-dark/70">{{ $r->guard_name }}</span>
+                                </x-ui.td>
+                                <x-ui.td>
                                     <div class="flex flex-wrap gap-1">
-                                        @foreach($role->permissions as $p)
-                                        <span
-                                            class="inline-flex px-2 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border dark:border-gray-600">
-                                            {{ $p->name }}
-                                        </span>
-                                        @endforeach
-                                        @if($role->permissions->isEmpty())
-                                        <span class="text-xs text-gray-400">—</span>
-                                        @endif
+                                        @forelse($r->permissions as $p)
+                                        <x-ui.badge color="gray">{{ $p->name }}</x-ui.badge>
+                                        @empty
+                                        <span class="text-xs text-dark/50">—</span>
+                                        @endforelse
                                     </div>
-                                </td>
-                                <td class="px-3 py-2 text-sm text-right">
-                                    <a href="{{ route('admin.roles.edit', $role) }}"
-                                        class="px-3 py-1 rounded border">Edit</a>
-                                    <form action="{{ route('admin.roles.destroy', $role) }}" method="POST"
-                                        class="inline" onsubmit="return confirm('Delete this role?')">
-                                        @csrf @method('DELETE')
-                                        <button class="px-3 py-1 rounded bg-red-600 text-white">Delete</button>
-                                    </form>
-                                </td>
-                            </tr>
+                                </x-ui.td>
+                                <x-ui.td align="right">
+                                    <div class="flex justify-end gap-2">
+                                        <x-ui.button as="a" href="{{ route('admin.roles.edit', $r) }}" size="sm"
+                                            variant="outline">
+                                            Edit
+                                        </x-ui.button>
+
+                                        <form action="{{ route('admin.roles.destroy', $r) }}" method="POST"
+                                            onsubmit="return confirm('Delete this role?')">
+                                            @csrf @method('DELETE')
+                                            <x-ui.button type="submit" size="sm" variant="danger">Delete</x-ui.button>
+                                        </form>
+                                    </div>
+                                </x-ui.td>
+                            </x-ui.tr>
                             @empty
                             <tr>
-                                <td colspan="3" class="px-3 py-6 text-center text-sm text-gray-500">No data</td>
+                                <td colspan="4">
+                                    <x-ui.empty-state title="No roles found"
+                                        subtitle="Buat role baru untuk mengelola akses.">
+                                        <x-ui.button as="a" href="{{ route('admin.roles.create') }}" variant="primary">
+                                            Create Role
+                                        </x-ui.button>
+                                    </x-ui.empty-state>
+                                </td>
                             </tr>
                             @endforelse
-                        </tbody>
-                    </table>
+                        </x-ui.tbody>
+                    </x-ui.table>
 
                     <div class="mt-4">
                         {{ $roles->links() }}
