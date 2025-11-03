@@ -7,6 +7,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }}</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
@@ -36,6 +37,8 @@
     request()->routeIs('admin.categories.*')],
     ['label' => 'Tags', 'icon' => 'tag', 'href' => route('admin.tags.index'), 'active' =>
     request()->routeIs('admin.tags.*')],
+    ['label' => 'Course', 'icon' => 'tag', 'href' => route('admin.courses.index'), 'active' =>
+    request()->routeIs('admin.courses.*')],
     ]);
     }
     @endphp
@@ -44,17 +47,11 @@
         <x-ui.sidebar :brand="config('app.name')" :items="$sidebarItems" />
 
         <main class="ml-64 flex-1 p-6 lg:p-8">
-            <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" />
+            <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" :header="$header" />
 
-            @isset($header)
-            <header class="mb-6">
-                <h2 class="text-xl font-semibold text-dark">
-                    {{ $header }}
-                </h2>
-            </header>
-            @endisset
 
-            <div class="space-y-8">
+
+            <div class=" space-y-8">
                 {{ $slot }}
             </div>
         </main>

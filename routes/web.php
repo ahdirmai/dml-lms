@@ -77,6 +77,43 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 
+// routes/web.php
+use App\Http\Controllers\Admin\CourseController;
+use App\Http\Controllers\Admin\CourseModuleController;
+use App\Http\Controllers\Admin\CourseLessonController;
+
+Route::middleware(['auth', 'role.active:admin'])
+    ->prefix('admin')->name('admin.')
+    ->group(function () {
+        // Course CRUD (non-AJAX OK)
+        Route::resource('courses', CourseController::class)->except(['show']);
+        Route::put('courses/{course}/toggle-status', [\App\Http\Controllers\Admin\CourseController::class, 'toggleStatus'])
+            ->name('courses.toggle-status');
+
+        // Builder UI
+        Route::get('courses/{course}/builder', [CourseController::class, 'builder'])
+            ->name('courses.builder');
+
+        // ------- AJAX MODULES -------
+        Route::prefix('courses/{course}/modules')->name('courses.modules.')->group(function () {
+            Route::get('/',        [CourseModuleController::class, 'index'])->name('index');         // JSON
+            Route::post('/',       [CourseModuleController::class, 'store'])->name('store');         // JSON
+            Route::put('{module}', [CourseModuleController::class, 'update'])->name('update');       // JSON
+            Route::delete('{module}', [CourseModuleController::class, 'destroy'])->name('destroy');  // JSON
+            Route::post('reorder', [CourseModuleController::class, 'reorder'])->name('reorder');     // JSON
+        });
+
+        // ------- AJAX LESSONS -------
+        Route::prefix('courses/{course}/modules/{module}/lessons')->name('courses.modules.lessons.')->group(function () {
+            Route::get('/',        [CourseLessonController::class, 'index'])->name('index');         // JSON
+            Route::post('/',       [CourseLessonController::class, 'store'])->name('store');         // JSON
+            Route::put('{lesson}', [CourseLessonController::class, 'update'])->name('update');       // JSON
+            Route::delete('{lesson}', [CourseLessonController::class, 'destroy'])->name('destroy');  // JSON
+            Route::post('reorder', [CourseLessonController::class, 'reorder'])->name('reorder');     // JSON
+        });
+    });
+
+
 
 
 require __DIR__ . '/auth.php';
