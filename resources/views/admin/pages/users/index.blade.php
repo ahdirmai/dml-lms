@@ -5,7 +5,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="mx-auto">
 
             {{-- Alerts --}}
             @if (session('success'))
@@ -18,8 +18,7 @@
                 {{ session('error') }}
             </x-ui.alert>
             @endif
-
-            <div class="bg-white shadow sm:rounded-lg">
+            <div class="bg-white shadow sm:rounded-lg mb-3">
                 {{-- Toolbar / Filters --}}
                 <div class="p-4 border-b border-soft flex flex-col md:flex-row md:items-center gap-3 justify-between">
                     <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -41,6 +40,9 @@
                         + Create
                     </x-ui.button>
                 </div>
+            </div>
+            <div class="bg-white shadow sm:rounded-lg">
+
 
                 {{-- Table --}}
                 <div class="p-4 overflow-x-auto">

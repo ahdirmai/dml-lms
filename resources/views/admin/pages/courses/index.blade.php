@@ -9,6 +9,12 @@
             @if (session('success'))
             <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ session('success') }}</div>
             @endif
+            @if (session('error'))
+            <div class="mb-4 p-3 rounded bg-red-100 text-red-800">
+                {{ session('error') }}
+            </div>
+            @endif
+
             @if ($errors->any())
             <div class="mb-4 p-3 rounded bg-red-100 text-red-800">
                 <ul class="list-disc list-inside">
@@ -17,7 +23,7 @@
             </div>
             @endif
 
-            {{-- ===== Analytic Cards ===== --}}
+            {{-- ===== Analytic Cards (Diasumsikan variabel $stats di passing ke view) ===== --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                 <x-ui.card class="p-4">
                     <div class="flex items-center justify-between">
@@ -67,7 +73,7 @@
                 </x-ui.card>
             </div>
 
-            {{-- ===== Filter Card (terpisah dari table) ===== --}}
+            {{-- ===== Filter Card ===== --}}
             <x-ui.card class="mb-4">
                 <div class="">
                     <form method="GET" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -80,6 +86,7 @@
                             <option value="">All Status</option>
                             <option value="published" @selected(request('status')==='published' )>Published</option>
                             <option value="draft" @selected(request('status')==='draft' )>Draft</option>
+                            {{-- $hasArchived harus di-pass dari controller untuk menampilkan opsi ini --}}
                             @if(($hasArchived ?? false) || request('status')==='archived')
                             <option value="archived" @selected(request('status')==='archived' )>Archived</option>
                             @endif
@@ -106,7 +113,7 @@
                 </div>
             </x-ui.card>
 
-            {{-- ===== Table Section (tanpa form filter lagi) ===== --}}
+            {{-- ===== Table Section ===== --}}
             <div class="bg-white shadow sm:rounded-lg">
                 <div class="p-4 border-b border-soft flex items-center justify-between">
                     <div class="text-sm text-dark/60">
@@ -116,8 +123,8 @@
                     </div>
 
                     <a href="{{ route('admin.courses.create') }}" class="inline-flex items-center justify-center font-semibold rounded-lg transition
-                       focus:outline-none focus:ring-2 focus:ring-offset-2 px-4 py-2 text-sm bg-brand text-white
-                       hover:brightness-95 focus:ring-brand">
+                        focus:outline-none focus:ring-2 focus:ring-offset-2 px-4 py-2 text-sm bg-brand text-white
+                        hover:brightness-95 focus:ring-brand">
                         + Create
                     </a>
                 </div>
@@ -129,11 +136,13 @@
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Title</th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Category
                                 </th>
+                                {{-- Kolom Tags ini memerlukan relasi 'tags' di model Course --}}
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Tags</th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Status
                                 </th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Jumlah
-                                    Siswa</th>
+                                    Siswa
+                                </th>
                                 <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Created By
                                 </th>
                                 <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase">Action
@@ -150,6 +159,7 @@
 
                                 {{-- ✅ Category --}}
                                 <td class="px-3 py-2">
+                                    {{-- Menggunakan relasi categories (many-to-many) --}}
                                     @if($c->categories->isNotEmpty())
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($c->categories as $cat)
@@ -161,9 +171,9 @@
                                     @endif
                                 </td>
 
-                                {{-- ✅ Tags --}}
+                                {{-- ✅ Tags (Asumsi relasi Tags ada) --}}
                                 <td class="px-3 py-2">
-                                    @if($c->tags->isNotEmpty())
+                                    @if($c->tags?->isNotEmpty())
                                     <div class="flex flex-wrap gap-1">
                                         @foreach($c->tags as $tag)
                                         <x-ui.badge color="accent">{{ $tag->name }}</x-ui.badge>
@@ -185,25 +195,34 @@
                                     @endif
                                 </td>
 
-                                {{-- ✅ Jumlah siswa --}}
+                                {{-- ✅ Jumlah siswa (Asumsi students_count di-load via withCount) --}}
                                 <td class="px-3 py-2">
-                                    <span class="text-dark/70">{{ $c->students_count ?? 0 }}</span>
+                                    <span class="text-dark/70">{{ number_format($c->students_count ?? 0) }}</span>
                                 </td>
 
-                                {{-- ✅ JCreate By --}}
+                                {{-- ✅ Created By (Menggunakan relasi instructor) --}}
                                 <td class="px-3 py-2">
-                                    <span class="text-dark/70">xx</span>
+                                    <span class="text-dark/70">{{ $c->instructor->name ?? 'N/A' }}</span>
                                 </td>
 
-                                {{-- ✅ Actions --}}
-                                <td class="px-3 py-2 text-right">
-                                    <a href="{{ route('admin.courses.builder', $c) }}"
-                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Builder</a>
-                                    <a href="{{ route('admin.courses.edit', $c) }}"
+                                {{-- ✅ Actions (PERBAIKAN LINK BUILDER & EDIT) --}}
+                                <td class="px-3 py-2 text-right whitespace-nowrap">
+                                    {{-- Link Builder: Menggunakan route admin.courses.edit --}}
+                                    <a href="{{ route('admin.courses.edit', $c->id) }}" class="inline-flex items-center justify-center font-semibold rounded-lg border
+                                       px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Builder</a>
+
+                                    {{-- Link Edit: Bisa dialihkan ke builder juga, atau jika ada halaman edit detail
+                                    lain --}}
+                                    <a href="{{ route('admin.courses.edit', $c->id) }}"
                                         class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Edit
                                     </a>
-                                    <form action="{{ route('admin.courses.destroy', $c) }}" method="POST" class="inline"
-                                        onsubmit="return confirm('Delete this course?')">@csrf @method('DELETE')<button
+
+                                    {{-- Link Delete (Asumsi ada route courses.destroy) --}}
+                                    <form action="{{ route('admin.courses.destroy', $c->id) }}" method="POST"
+                                        class="inline" onsubmit="return confirm('Delete this course?')">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
                                             class="inline-flex items-center justify-center font-semibold rounded-lg px-3 py-1.5 text-sm bg-danger text-white hover:brightness-95">Delete</button>
                                     </form>
                                 </td>

@@ -76,44 +76,51 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-
-// routes/web.php
 use App\Http\Controllers\Admin\CourseController;
-use App\Http\Controllers\Admin\CourseModuleController;
-use App\Http\Controllers\Admin\CourseLessonController;
+use App\Http\Controllers\Admin\ModuleController;
+use App\Http\Controllers\Admin\LessonController;
+use App\Http\Controllers\Admin\QuizController;
 
-Route::middleware(['auth', 'role.active:admin'])
-    ->prefix('admin')->name('admin.')
-    ->group(function () {
-        // Course CRUD (non-AJAX OK)
-        Route::resource('courses', CourseController::class)->except(['show']);
-        Route::put('courses/{course}/toggle-status', [\App\Http\Controllers\Admin\CourseController::class, 'toggleStatus'])
-            ->name('courses.toggle-status');
+// Pastikan Anda telah mengimpor semua Controller di atas file ini
 
-        // Builder UI
-        Route::get('courses/{course}/builder', [CourseController::class, 'builder'])
-            ->name('courses.builder');
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
 
-        // ------- AJAX MODULES -------
-        Route::prefix('courses/{course}/modules')->name('courses.modules.')->group(function () {
-            Route::get('/',        [CourseModuleController::class, 'index'])->name('index');         // JSON
-            Route::post('/',       [CourseModuleController::class, 'store'])->name('store');         // JSON
-            Route::put('{module}', [CourseModuleController::class, 'update'])->name('update');       // JSON
-            Route::delete('{module}', [CourseModuleController::class, 'destroy'])->name('destroy');  // JSON
-            Route::post('reorder', [CourseModuleController::class, 'reorder'])->name('reorder');     // JSON
-        });
+    // Courses Index
+    Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 
-        // ------- AJAX LESSONS -------
-        Route::prefix('courses/{course}/modules/{module}/lessons')->name('courses.modules.lessons.')->group(function () {
-            Route::get('/',        [CourseLessonController::class, 'index'])->name('index');         // JSON
-            Route::post('/',       [CourseLessonController::class, 'store'])->name('store');         // JSON
-            Route::put('{lesson}', [CourseLessonController::class, 'update'])->name('update');       // JSON
-            Route::delete('{lesson}', [CourseLessonController::class, 'destroy'])->name('destroy');  // JSON
-            Route::post('reorder', [CourseLessonController::class, 'reorder'])->name('reorder');     // JSON
-        });
-    });
+    // Course Builder Routes
+    Route::get('/courses/create', [CourseController::class, 'create'])->name('courses.create');
+    Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
 
+    // Route Edit/Builder (GET)
+    Route::get('/courses/{course}/edit', [CourseController::class, 'edit'])->name('courses.edit');
 
+    // Course Updates & Actions
+    // POST dengan method spoofing di Blade akan mengarah ke update
+    Route::patch('/courses/{course}', [CourseController::class, 'update'])->name('courses.update');
+    // Hapus showData karena non-AJAX
+    Route::post('/courses/{course}/publish', [CourseController::class, 'publish'])->name('courses.publish');
+    // POST dengan method spoofing di Blade akan mengarah ke destroy
+    Route::delete('/courses/{course}', [CourseController::class, 'destroy'])->name('courses.destroy');
 
+    // Modules (Via Form POST Biasa)
+    Route::post('/courses/{course}/modules', [ModuleController::class, 'store'])->name('modules.store');
+    Route::patch('/modules/{module}', [ModuleController::class, 'update'])->name('modules.update');
+    Route::delete('/modules/{module}', [ModuleController::class, 'destroy'])->name('modules.destroy');
+    Route::post('/courses/{course}/modules/reorder', [ModuleController::class, 'reorder'])->name('modules.reorder');
 
+    // Lessons (Via Form POST Biasa)
+    Route::post('/modules/{module}/lessons', [LessonController::class, 'store'])->name('lessons.store');
+
+    Route::patch('/lessons/{lesson}', [LessonController::class, 'update'])->name('lessons.update');
+    Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy'])->name('lessons.destroy');
+    Route::post('/modules/{module}/lessons/reorder', [LessonController::class, 'reorder'])->name('lessons.reorder');
+
+    // Quizzes (Via Form POST Biasa)
+    // Asumsi QuizController juga diubah untuk non-AJAX (redirect)
+    Route::post('/lessons/{lesson}/quiz', [QuizController::class, 'upsert'])->name('quizzes.upsert');
+    Route::post('/quizzes/{quiz}/questions', [QuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+    Route::patch('/questions/{question}', [QuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+    Route::delete('/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+});
 require __DIR__ . '/auth.php';

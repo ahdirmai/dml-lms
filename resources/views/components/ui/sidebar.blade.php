@@ -9,8 +9,22 @@
         <h1 class="text-lg font-bold text-dark">{{ $brand }}</h1>
     </div>
 
-    <nav class="space-y-2 mb-6">
+    <nav class="space-y-4 mb-6">
+        @php $currentGroup = null; @endphp
+
         @foreach($items as $item)
+        @if($item['group'] !== $currentGroup)
+        @if($currentGroup !== null)
+        <div class="border-t border-gray-100 my-2"></div>
+        @endif
+        @if($item['group'])
+        <p class="text-xs uppercase font-semibold text-gray-400 mt-4 mb-2">
+            {{ $item['group'] }}
+        </p>
+        @endif
+        @php $currentGroup = $item['group']; @endphp
+        @endif
+
         <x-ui.nav-item :href="$item['href']" :active="$item['active']" :icon="$item['icon']">
             {{ $item['label'] }}
         </x-ui.nav-item>

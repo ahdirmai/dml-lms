@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
             RoleAndPermissionSeeder::class,
             UserSeeder::class,
             TagCategorySeeder::class,
-            CourseModuleLessonSeeder::class,
+            // CourseModuleLessonSeeder::class,
         ]);
     }
 }

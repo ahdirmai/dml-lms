@@ -7,17 +7,18 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('modules', function (Blueprint $t) {
+        Schema::create('quizzes', function (Blueprint $t) {
             $t->uuid('id')->primary();
-            $t->foreignUuid('course_id')->constrained('courses')->cascadeOnDelete();
+            $t->foreignUuid('lesson_id')->constrained('lessons')->cascadeOnDelete();
             $t->string('title', 200);
-            $t->integer('order')->default(1);
+            $t->integer('time_limit_seconds')->nullable();
+            $t->boolean('shuffle_questions')->default(true);
             $t->timestamps();
-            $t->index(['course_id', 'order']);
+            $t->index(['lesson_id']);
         });
     }
     public function down(): void
     {
-        Schema::dropIfExists('modules');
+        Schema::dropIfExists('quizzes');
     }
 };

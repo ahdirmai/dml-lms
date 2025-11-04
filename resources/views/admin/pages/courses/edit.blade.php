@@ -4,13 +4,15 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+        <div class="mx-auto">
             <div class="bg-white shadow sm:rounded-lg p-6">
                 @include('admin.pages.courses._form', [
                 'action' => route('admin.courses.update', $course),
                 'method' => 'PUT',
                 'course' => $course,
-                'submitLabel' => 'Save Changes'
+                'submitLabel' => 'Save Changes',
+                'categories' => $categories, // ✅ sudah ada
+                'instructors' => $instructors, // ✅ tambahkan ini
                 ])
 
                 <div class="mt-6 flex gap-2">

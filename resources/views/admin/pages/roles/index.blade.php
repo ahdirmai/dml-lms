@@ -7,7 +7,7 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="mx-auto">
 
             {{-- Alerts --}}
             @if (session('success'))
@@ -16,8 +16,7 @@
             @if (session('error'))
             <x-ui.alert variant="danger" class="mb-4">{{ session('error') }}</x-ui.alert>
             @endif
-
-            <div class="bg-white shadow sm:rounded-lg">
+            <div class="bg-white shadow sm:rounded-lg mb-3">
                 {{-- Filters / Actions --}}
                 <div
                     class="p-4 border-b border-soft flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -33,6 +32,9 @@
                         + Create
                     </x-ui.button>
                 </div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg">
 
                 {{-- Table --}}
                 <div class="p-4 overflow-x-auto">

@@ -7,30 +7,38 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('courses', function (Blueprint $table) {
-            $table->uuid('id')->primary();
+        Schema::create('courses', function (Blueprint $t) {
+            $t->uuid('id')->primary();
 
-            $table->string('title');
-            $table->string('slug')->unique();
-            $table->text('subtitle')->nullable();
-            $table->longText('description')->nullable();
+            $t->string('title', 180);
+            $t->string('slug', 220)->unique();
+            $t->string('subtitle', 180)->nullable();
 
-            $table->string('thumbnail_url')->nullable();
-            $table->string('language', 10)->default('en');
-            $table->enum('level', ['beginner', 'intermediate', 'advanced'])->default('beginner');
+            $t->longText('description');
 
-            $table->enum('visibility', ['public', 'private', 'unlisted'])->default('public');
-            $table->enum('status', ['draft', 'published', 'archived'])->default('draft');
-            $table->timestamp('published_at')->nullable();
+            // dipakai saat upload thumbnail
+            $t->string('thumbnail_path', 2048)->nullable();
 
-            // author (instructor/admin)
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+            // status: draft|published|archived
+            $t->string('status', 20)->default('draft');
+            $t->timestamp('published_at')->nullable();
 
-            $table->unsignedInteger('duration_minutes')->default(0); // total duration (cached)
-            $table->unsignedInteger('lessons_count')->default(0);    // cached
+            // level/kesulitan: beginner|intermediate|advanced
+            $t->string('difficulty', 20)->default('beginner');
 
-            $table->softDeletes();
-            $table->timestamps();
+            // relasi ke users (instructor)
+            $t->foreignId('instructor_id')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
+
+            $t->timestamps();
+            $t->softDeletes();
+
+            // indeks tambahan yang umum dipakai
+            $t->index(['status']);
+            $t->index(['difficulty']);
+            $t->index(['instructor_id']);
         });
     }
 

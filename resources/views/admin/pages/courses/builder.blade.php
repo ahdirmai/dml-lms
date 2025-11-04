@@ -1,4 +1,8 @@
 <x-app-layout :title="'Course Builder'">
+
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-dark leading-tight">Course Builder </h2>
+    </x-slot>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Left: Structure --}}
         <div class="lg:col-span-1 bg-white rounded-xl shadow p-4">
@@ -49,7 +53,8 @@
                 <form id="courseForm" action="{{ route('admin.courses.update', $course) }}" method="POST"
                     enctype="multipart/form-data">
                     @method('PUT')
-                    @include('admin.pages.courses._form', ['course'=>$course, 'categories'=>$categories])
+                    @include('admin.pages.courses._form', ['course'=>$course,
+                    'categories'=>$categories,'instructors'=>$instructors])
                 </form>
             </div>
 

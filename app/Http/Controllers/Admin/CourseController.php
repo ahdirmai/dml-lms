@@ -1,181 +1,174 @@
 <?php
-// app/Http/Controllers/Admin/CourseController.php
 
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Lms\Category;
+use App\Http\Requests\CourseRequest;
 use App\Models\Lms\Course;
-use App\Models\Lms\Tag;
+use App\Models\Lms\Category;
+use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
 
 class CourseController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Course::query()
-            ->with(['categories:id,name', 'tags:id,name'])
-            ->when($q = $request->string('q')->toString(), function ($qq) use ($q) {
+        $q              = trim((string) $request->input('q', ''));
+        $status         = $request->input('status');
+        $categoryId     = $request->integer('category_id') ?: null;
+        $instructorId   = $request->integer('instructor_id') ?: null;
+        $sort           = $request->input('sort', 'date_desc');
+
+        $validStatuses = ['draft', 'published', 'archived'];
+        if ($status && ! in_array($status, $validStatuses, true)) {
+            return back()->withErrors(['status' => 'Status tidak valid.']);
+        }
+        $validSorts = ['date_desc', 'date_asc', 'title_asc', 'title_desc', 'status_asc', 'status_desc'];
+        if (!in_array($sort, $validSorts, true)) {
+            $sort = 'date_desc';
+        }
+
+        $courses = Course::query()
+            ->with(['categories:id,name', 'instructor:id,name'])
+            ->withCount(['modules', 'lessons'])
+            ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {
                     $w->where('title', 'like', "%{$q}%")
                         ->orWhere('subtitle', 'like', "%{$q}%")
                         ->orWhere('description', 'like', "%{$q}%");
                 });
             })
-            ->when($request->filled('status'), fn($qq) => $qq->where('status', $request->get('status')))
-            ->when($request->filled('visibility'), fn($qq) => $qq->where('visibility', $request->get('visibility')))
-            ->when($request->filled('language'), fn($qq) => $qq->where('language', $request->get('language')))
-            ->when($request->filled('level'), fn($qq) => $qq->where('level', $request->get('level')))
-            ->when($request->filled('category_id'), fn($qq) => $qq->whereHas('categories', function ($c) use ($request) {
-                $c->where('categories.id', $request->get('category_id'));
-            }))
-            ->when($request->filled('tag_id'), fn($qq) => $qq->whereHas('tags', function ($t) use ($request) {
-                $t->where('tags.id', $request->get('tag_id'));
-            }))
-            ->latest('created_at');
+            ->when($status, fn($qq) => $qq->where('status', $status))
+            ->when($categoryId, function ($qq) use ($categoryId) {
+                $qq->whereHas('categories', fn($w) => $w->where('categories.id', $categoryId));
+            })
+            ->when($instructorId, fn($qq) => $qq->where('instructor_id', $instructorId))
+            ->when($sort, function ($qq) use ($sort) {
+                return match ($sort) {
+                    'date_asc'      => $qq->orderBy('created_at', 'asc'),
+                    'date_desc'     => $qq->orderBy('created_at', 'desc'),
+                    'title_asc'     => $qq->orderBy('title', 'asc'),
+                    'title_desc'    => $qq->orderBy('title', 'desc'),
+                    'status_asc'    => $qq->orderBy('status', 'asc')->orderBy('created_at', 'desc'),
+                    'status_desc'   => $qq->orderBy('status', 'desc')->orderBy('created_at', 'desc'),
+                    default         => $qq->orderBy('created_at', 'desc'),
+                };
+            }, fn($qq) => $qq->orderBy('created_at', 'desc'))
+            ->paginate(12)
+            ->withQueryString();
 
-        // Jika kamu ingin selalu akuratkan lessons_count tanpa kolom cached:
-        // $query->withCount('lessons');
+        $categories  = Category::select('id', 'name')->orderBy('name')->get();
+        $instructors = User::select('id', 'name')->orderBy('name')->get();
 
-        $courses = $query->paginate(12);
-
-        $stats = [
-            'total'     => Course::count(),
-            'published' => Course::where('status', 'published')->count(),
-            'draft'     => Course::where('status', 'draft')->count(),
-        ];
-        $hasArchived = Course::where('status', 'archived')->exists();
-
-        $categories = Category::orderBy('name')->get(['id', 'name']);
-        $tags = Tag::orderBy('name')->get(['id', 'name']);
-
-        return view('admin.pages.courses.index', compact(
-            'courses',
-            'stats',
-            'hasArchived',
-            'categories',
-            'tags'
-        ));
+        return view('admin.pages.courses.index', compact('courses', 'categories', 'instructors', 'q', 'status', 'categoryId', 'instructorId', 'sort'));
     }
-
 
     public function create()
     {
-        $categories = Category::orderBy('name')->get();
-
-        return view('admin.pages.courses.create', compact('categories'));
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'title'        => ['required', 'string', 'max:180'],
-            'description'  => ['required', 'string'],
-            'category_id'  => ['required', 'exists:categories,id'],
-            'duration'     => ['required', 'integer', 'min:1'],
-            'thumbnail'    => ['nullable', 'image', 'max:2048'], // <= 2MB
-        ]);
-
-        // unggah thumbnail jika ada
-        $thumbnailPath = null;
-        if ($request->hasFile('thumbnail')) {
-            $thumbnailPath = $request->file('thumbnail')->store('courses', 'public'); // storage/app/public/courses
-        }
-
-        $course = Course::create([
-            'title'          => $data['title'],
-            'description'    => $data['description'],
-            'category_id'    => $data['category_id'],
-            'duration'       => $data['duration'],
-            'thumbnail_path' => $thumbnailPath,
-            'status'         => 'draft',
-            'instructor_id'  => $request->user()->id,  // pemilik/pengajar
-        ]);
-
-        // Save & Continue -> langsung ke builder
-        if ($request->boolean('save_and_continue')) {
-            return redirect()
-                ->route('admin.courses.builder', $course)
-                ->with('success', 'Course created. You can now add modules & lessons.');
-        }
-
-        return redirect()
-            ->route('admin.courses.edit', $course)
-            ->with('success', 'Course created.');
+        $categories  = Category::select('id', 'name')->orderBy('name')->get();
+        $instructors = User::select('id', 'name')->orderBy('name')->get();
+        return view('admin.pages.courses.create-builder', compact('categories', 'instructors'));
     }
 
     public function edit(Course $course)
     {
-        $categories = Category::orderBy('name')->get();
-
-        return view('admin.pages.courses.edit', compact('course', 'categories'));
-    }
-
-    public function update(Request $request, Course $course)
-    {
-        $data = $request->validate([
-            'title'        => ['required', 'string', 'max:180'],
-            'description'  => ['required', 'string'],
-            'category_id'  => ['required', 'exists:categories,id'],
-            'duration'     => ['required', 'integer', 'min:1'],
-            'thumbnail'    => ['nullable', 'image', 'max:2048'],
-            'status'       => ['nullable', Rule::in(['draft', 'published', 'archived'])],
+        $course->load([
+            'categories:id,name',
+            'instructor:id,name',
+            'modules' => fn($q) => $q->orderBy('order'),
+            'modules.lessons' => fn($q) => $q->orderBy('order'),
+            'modules.lessons.quiz',
         ]);
 
-        // upload thumbnail baru (jika ada), tidak wajib saat update
+        $categories  = Category::select('id', 'name')->orderBy('name')->get();
+        $instructors = User::select('id', 'name')->orderBy('name')->get();
+        return view('admin.pages.courses.create-builder', compact('categories', 'instructors', 'course'));
+    }
+
+    /**
+     * Store menggunakan Form POST biasa dan redirect.
+     */
+    public function store(CourseRequest $request)
+    {
+        $data = $request->validated();
+        $thumb = $request->hasFile('thumbnail')
+            ? $request->file('thumbnail')->store('courses', 'public')
+            : null;
+
+        $course = Course::create([
+            'id'             => (string) Str::uuid(),
+            'title'          => $data['title'],
+            'slug'           => Str::slug($data['title']) . '-' . Str::random(5),
+            'subtitle'       => $data['subtitle'] ?? null,
+            'description'    => $data['description'],
+            'thumbnail_path' => $thumb,
+            'status'         => 'draft',
+            'difficulty'     => $data['level'] ?? 'beginner',
+            'instructor_id'  => $data['instructor_id'],
+        ]);
+
+        $course->categories()->sync([$data['category_id']]);
+
+        // Redirect ke halaman builder setelah CREATE
+        return redirect()->route('admin.courses.edit', $course->id)
+            ->with('success', 'Kursus dasar "' . $course->title . '" berhasil dibuat. Silakan tambahkan Modul dan Pelajaran.');
+    }
+
+    /**
+     * Update menggunakan Form POST biasa dan redirect.
+     */
+    public function update(CourseRequest $request, Course $course)
+    {
+        $data = $request->validated();
+
         if ($request->hasFile('thumbnail')) {
-            // optional: hapus yang lama
-            if ($course->thumbnail_path && Storage::disk('public')->exists($course->thumbnail_path)) {
+            if ($course->thumbnail_path) {
                 Storage::disk('public')->delete($course->thumbnail_path);
             }
-            $data['thumbnail_path'] = $request->file('thumbnail')->store('courses', 'public');
+            $course->thumbnail_path = $request->file('thumbnail')->store('courses', 'public');
         }
 
-        // status opsional — kalau tidak dikirim, jangan diubah
-        if (! array_key_exists('status', $data)) {
-            unset($data['status']);
-        }
+        $course->fill([
+            'title'         => $data['title'],
+            'subtitle'      => $data['subtitle'] ?? null,
+            'description'   => $data['description'],
+            'difficulty'    => $data['level'] ?? $course->difficulty,
+            'instructor_id' => $data['instructor_id'],
+        ])->save();
 
-        // field yang tidak ada di skema jangan dikirim
-        unset($data['thumbnail']);
+        $course->categories()->sync([$data['category_id']]);
 
-        $course->update($data);
+        // Redirect kembali ke halaman yang sama (builder) setelah UPDATE
+        return redirect()->back()
+            ->with('success', 'Pengaturan Kursus "' . $course->title . '" berhasil diperbarui.');
+    }
 
-        return back()->with('success', 'Course updated.');
+    /**
+     * Publish menggunakan Form POST biasa dan redirect.
+     */
+    public function publish(Request $request, Course $course)
+    {
+        $course->load(['modules.lessons.quiz']);
+        // ... (Tambahkan validasi publish jika diperlukan) ...
+        $course->update(['status' => 'published', 'published_at' => now()]);
+        return redirect()->back()->with('success', 'Kursus berhasil dipublikasikan!');
     }
 
     public function destroy(Course $course)
     {
-        // optional: hapus thumbnail
-        if ($course->thumbnail_path && Storage::disk('public')->exists($course->thumbnail_path)) {
+        if ($course->thumbnail_path) {
             Storage::disk('public')->delete($course->thumbnail_path);
         }
-
+        $title = $course->title;
         $course->delete();
 
-        return redirect()
-            ->route('admin.courses.index')
-            ->with('success', 'Course deleted.');
-    }
-
-    public function builder(Course $course)
-    {
-        // builder butuh kategori untuk form Course di panel kanan
-        $categories = Category::orderBy('name')->get();
-
-        return view('admin.pages.courses.builder', compact('course', 'categories'));
+        return redirect()->route('admin.courses.index')->with('success', 'Course "' . $title . '" berhasil dihapus.');
     }
 
     /**
-     * Endpoint khusus toggle publish/draft (opsional tapi rapi).
+     * Hapus AJAX endpoint yang tidak digunakan lagi.
+     * showData dihapus.
      */
-    public function toggleStatus(Course $course)
-    {
-        $next = $course->status === 'published' ? 'draft' : 'published';
-        $course->update(['status' => $next]);
-
-        return back()->with('success', "Course status set to {$next}.");
-    }
 }

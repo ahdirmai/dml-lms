@@ -3,73 +3,44 @@
 namespace App\Models\Lms;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Course extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasUuids;
 
-    /** ✅ UUID primary key */
     public $incrementing = false;
     protected $keyType = 'string';
 
     protected $fillable = [
+        'id',
         'title',
         'slug',
         'subtitle',
         'description',
-        'thumbnail_url',
-        'language',
-        'level',
-        'visibility',
+        'thumbnail_path',
+        'difficulty',
         'status',
         'published_at',
-        'created_by',
-        'duration_minutes',
-        'lessons_count',
+        'instructor_id'
     ];
 
-    protected $casts = [
-        'published_at' => 'datetime',
-    ];
-
-    protected static function booted(): void
-    {
-        static::creating(function (self $model) {
-            if (! $model->getKey()) {
-                $model->{$model->getKeyName()} = (string) \Illuminate\Support\Str::uuid();
-            }
-            if (empty($model->slug)) {
-                $model->slug = \Illuminate\Support\Str::slug($model->title) . '-' . \Illuminate\Support\Str::random(6);
-            }
-        });
-    }
-
-    public function author()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'created_by');
-    }
-
-    public function modules()
-    {
-        return $this->hasMany(CourseModule::class)->orderBy('position');
-    }
-
-    public function lessons()
-    {
-        return $this->hasManyThrough(CourseLesson::class, CourseModule::class, 'course_id', 'module_id')
-            ->orderBy('position');
-    }
+    protected $casts = ['published_at' => 'datetime'];
 
     public function categories()
     {
-        return $this->belongsToMany(\App\Models\Lms\Category::class, 'category_course');
+        return $this->belongsToMany(Category::class, 'category_course');
     }
-
-    public function tags()
+    public function instructor()
     {
-        return $this->belongsToMany(\App\Models\Lms\Tag::class, 'course_tag');
+        return $this->belongsTo(\App\Models\User::class, 'instructor_id');
+    }
+    public function modules()
+    {
+        return $this->hasMany(Module::class);
+    }
+    public function lessons()
+    {
+        return $this->hasMany(Lesson::class);
     }
 }

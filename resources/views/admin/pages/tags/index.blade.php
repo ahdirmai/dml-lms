@@ -4,12 +4,12 @@
     </x-slot>
 
     <div class="py-6">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <div class="mx-auto">
             @if (session('success')) <x-ui.alert variant="success" class="mb-4">{{ session('success') }}</x-ui.alert>
             @endif
             @if (session('error')) <x-ui.alert variant="danger" class="mb-4">{{ session('error') }}</x-ui.alert> @endif
 
-            <div class="bg-white shadow sm:rounded-lg">
+            <div class="bg-white shadow sm:rounded-lg mb-3">
                 <div
                     class="p-4 border-b border-soft flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <form method="GET" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -21,6 +21,9 @@
                     </form>
                     <x-ui.button as="a" href="{{ route('admin.tags.create') }}" variant="primary">+ Create</x-ui.button>
                 </div>
+            </div>
+
+            <div class="bg-white shadow sm:rounded-lg">
 
                 <div class="p-4 overflow-x-auto">
                     <x-ui.table>
