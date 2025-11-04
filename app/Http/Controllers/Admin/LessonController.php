@@ -27,6 +27,8 @@ class LessonController extends Controller
         // 2. Parsing Content ID
         $ids = $this->parseSourceIds($data['kind'], $data['content_url'] ?? null);
 
+        // return $ids;
+
         // 3. Simpan Lesson
         $lesson = Lesson::create([
             'id'               => (string) Str::uuid(),

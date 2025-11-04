@@ -12,6 +12,7 @@ return new class extends Migration {
             $t->foreignUuid('course_id')->constrained('courses')->cascadeOnDelete();
             $t->foreignUuid('module_id')->constrained('modules')->cascadeOnDelete();
             $t->string('title', 200);
+            $t->text('description');
             $t->string('kind', 20)->default('youtube'); // youtube|gdrive|quiz
             $t->string('content_url', 2048)->nullable();
             $t->string('youtube_video_id', 32)->nullable();

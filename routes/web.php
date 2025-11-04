@@ -116,8 +116,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::delete('/lessons/{lesson}', [LessonController::class, 'destroy'])->name('lessons.destroy');
     Route::post('/modules/{module}/lessons/reorder', [LessonController::class, 'reorder'])->name('lessons.reorder');
 
-    // Quizzes (Via Form POST Biasa)
-    // Asumsi QuizController juga diubah untuk non-AJAX (redirect)
     Route::post('/lessons/{lesson}/quiz', [QuizController::class, 'upsert'])->name('quizzes.upsert');
     Route::post('/quizzes/{quiz}/questions', [QuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
     Route::patch('/questions/{question}', [QuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
