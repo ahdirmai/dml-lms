@@ -81,6 +81,10 @@ use App\Http\Controllers\Admin\ModuleController;
 use App\Http\Controllers\Admin\LessonController;
 use App\Http\Controllers\Admin\QuizController;
 
+// routes/web.php
+use App\Http\Controllers\Admin\CourseAssignController;
+use App\Http\Controllers\Admin\CourseProgressController;
+
 // Pastikan Anda telah mengimpor semua Controller di atas file ini
 
 Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
@@ -120,5 +124,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
     Route::post('/quizzes/{quiz}/questions', [QuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
     Route::patch('/questions/{question}', [QuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
     Route::delete('/questions/{question}', [QuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+
+
+
+    Route::get('courses/{course}/assign-students', [CourseAssignController::class, 'form'])
+        ->name('courses.assign');
+
+    Route::post('courses/{course}/assign-students', [CourseAssignController::class, 'store'])
+        ->name('courses.assign.store');
+
+    Route::delete('courses/{course}/students/{user}', [CourseAssignController::class, 'remove'])
+        ->name('courses.assign.remove');
+
+    Route::get('courses/{course}/progress', [CourseProgressController::class, 'show'])
+        ->name('courses.progress');
 });
 require __DIR__ . '/auth.php';

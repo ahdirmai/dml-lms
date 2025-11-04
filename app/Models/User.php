@@ -3,6 +3,8 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Models\Lms\Enrollment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -56,5 +58,17 @@ class User extends Authenticatable
         $this->forceFill(['active_role' => $roleName])->save();
 
         return true;
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function coursesEnrolled()
+    {
+        return $this->belongsToMany(\App\Models\Lms\Course::class, 'enrollments', 'user_id', 'course_id')
+            ->withPivot(['status', 'enrolled_at', 'completed_at'])
+            ->withTimestamps();
     }
 }

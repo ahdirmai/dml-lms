@@ -210,12 +210,20 @@
                                     {{-- Link Builder: Menggunakan route admin.courses.edit --}}
                                     <a href="{{ route('admin.courses.edit', $c->id) }}" class="inline-flex items-center justify-center font-semibold rounded-lg border
                                        px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Builder</a>
+                                    <a href="{{ route('admin.courses.assign', $c->id) }}"
+                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
+                                        Assign
+                                    </a>
 
+                                    <a href="{{ route('admin.courses.progress', $c->id) }}"
+                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
+                                        Progress
+                                    </a>
                                     {{-- Link Edit: Bisa dialihkan ke builder juga, atau jika ada halaman edit detail
                                     lain --}}
-                                    <a href="{{ route('admin.courses.edit', $c->id) }}"
+                                    {{-- <a href="{{ route('admin.courses.edit', $c->id) }}"
                                         class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Edit
-                                    </a>
+                                    </a> --}}
 
                                     {{-- Link Delete (Asumsi ada route courses.destroy) --}}
                                     <form action="{{ route('admin.courses.destroy', $c->id) }}" method="POST"

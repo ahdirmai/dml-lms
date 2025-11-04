@@ -2,6 +2,7 @@
 
 namespace App\Models\Lms;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
@@ -42,5 +43,17 @@ class Course extends Model
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
+    }
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'course_id');
+    }
+
+    public function students()
+    {
+        // convenience relation
+        return $this->belongsToMany(User::class, 'enrollments', 'course_id', 'user_id')
+            ->withPivot(['status', 'enrolled_at', 'completed_at'])
+            ->withTimestamps();
     }
 }

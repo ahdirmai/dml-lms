@@ -151,10 +151,27 @@ class CourseController extends Controller
     public function publish(Request $request, Course $course)
     {
         $course->load(['modules.lessons.quiz']);
-        // ... (Tambahkan validasi publish jika diperlukan) ...
-        $course->update(['status' => 'published', 'published_at' => now()]);
+
+        // ✅ Validasi: minimal 1 module
+        if ($course->modules->isEmpty()) {
+            return redirect()->back()->with('error', 'Kursus harus memiliki minimal 1 modul sebelum dipublikasikan.');
+        }
+
+        // ✅ Validasi: minimal 1 lesson di total semua modul
+        $totalLessons = $course->modules->sum(fn($module) => $module->lessons->count());
+        if ($totalLessons < 1) {
+            return redirect()->back()->with('error', 'Setiap kursus harus memiliki minimal 1 pelajaran (lesson) sebelum dipublikasikan.');
+        }
+
+        // ✅ Jika valid, ubah status
+        $course->update([
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
         return redirect()->back()->with('success', 'Kursus berhasil dipublikasikan!');
     }
+
 
     public function destroy(Course $course)
     {
