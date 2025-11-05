@@ -74,6 +74,31 @@
     ],
     ]);
     }
+
+    if ($activeRole === 'instructor') {
+    $sidebarItems = array_merge($sidebarItems, [[
+    'group' => 'Course Management',
+    'label' => 'Courses',
+    'icon' => 'book',
+    'href' => route('admin.courses.index'),
+    'active' => request()->routeIs('admin.courses.*'),
+    ],
+    [
+    'group' => 'Course Management',
+    'label' => 'Categories',
+    'icon' => 'folder',
+    'href' => route('admin.categories.index'),
+    'active' => request()->routeIs('admin.categories.*'),
+    ],
+    [
+    'group' => 'Course Management',
+    'label' => 'Tags',
+    'icon' => 'tag',
+    'href' => route('admin.tags.index'),
+    'active' => request()->routeIs('admin.tags.*'),
+    ],
+    ]);
+    }
     @endphp
 
     <div class="flex min-h-screen">

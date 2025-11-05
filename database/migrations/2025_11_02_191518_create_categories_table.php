@@ -13,9 +13,14 @@ return new class extends Migration {
             $table->string('slug', 191)->unique();
             $table->text('description')->nullable();
             $table->timestamps();
+
+            // Perbaikan: Tambahkan ->nullable() di sini
+            $table->foreignId('created_by')->nullable()->constrained('users')->cascadeOnDelete();
+
             $table->index(['created_at']);
         });
     }
+
     public function down(): void
     {
         Schema::dropIfExists('categories');

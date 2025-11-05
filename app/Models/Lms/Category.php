@@ -11,7 +11,7 @@ class Category extends Model
 {
     use HasUuids, HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description'];
+    protected $fillable = ['name', 'slug', 'description', 'created_by'];
 
     protected static function booted(): void
     {
@@ -25,5 +25,10 @@ class Category extends Model
         });
     }
 
+    public function createdBy()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+    
     // relasi ke Course nanti: hasMany(Course::class)
 }
