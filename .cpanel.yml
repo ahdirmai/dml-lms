@@ -1,16 +1,12 @@
 deployment:
   tasks:
-    # 0) Konfigurasi path
     - export APP_NAME="dml-lms"
     - export RELEASE="$HOME/apps/$APP_NAME/current"
     - export SHARED="$HOME/apps/$APP_NAME/shared"
     - export SUBDOMAIN_DOCROOT="$HOME/public_html/stagging-lms.ahdirmai.id"
 
-    # 1) Pastikan folder tujuan ada
-    - /bin/mkdir -p "$RELEASE"
-    - /bin/mkdir -p "$SHARED/storage"
+    - /bin/mkdir -p "$RELEASE" "$SHARED/storage"
 
-    # 2) Sinkronkan source repo ke folder current (skip folder berat)
     - /usr/bin/rsync -a --delete \
         --exclude ".git" \
         --exclude ".cpanel.yml" \
@@ -19,37 +15,19 @@ deployment:
         --exclude "storage" \
         ./ "$RELEASE/"
 
-    # 3) Link-kan shared .env & storage
     - /bin/ln -snf "$SHARED/.env" "$RELEASE/.env"
-    - /bin/rm -rf "$RELEASE/storage"
-    - /bin/ln -snf "$SHARED/storage" "$RELEASE/storage"
+    - /bin/rm -rf "$RELEASE/storage" && /bin/ln -snf "$SHARED/storage" "$RELEASE/storage"
 
-    # 4) Cari composer (fallback bila path berbeda di hosting)
-    - if [ -x /opt/cpanel/composer/bin/composer ]; then export COMPOSER="/opt/cpanel/composer/bin/composer"; else export COMPOSER="$(command -v composer)"; fi
-
-    # 5) Composer install (tanpa dev)
+    - if [ -x /opt/cpanel/composer/bin/composer ]; then COMPOSER="/opt/cpanel/composer/bin/composer"; else COMPOSER="$(command -v composer)"; fi
     - /usr/local/bin/php -d memory_limit=-1 "$COMPOSER" -d "$RELEASE" install --no-dev --prefer-dist --no-interaction --optimize-autoloader
 
-    # 6) Permission aman
-    - /bin/find "$RELEASE" -type f -exec chmod 0644 {} \;
-    - /bin/find "$RELEASE" -type d -exec chmod 0755 {} \;
-    - /bin/chmod -R 775 "$RELEASE/storage" "$RELEASE/bootstrap/cache" || true
-
-    # 7) Generate APP_KEY jika kosong
     - if ! /usr/local/bin/php -r "echo (int) (strlen(@parse_ini_file('$RELEASE/.env')['APP_KEY']??''));" | grep -q '[1-9]'; then /usr/local/bin/php "$RELEASE/artisan" key:generate --force; fi
 
-    # 8) Buat symlink docroot subdomain -> public (tanpa SSH)
-    #    Jika docroot masih berupa folder biasa, backup sekali lalu ganti symlink.
-    - if [ -d "$SUBDOMAIN_DOCROOT" ] && [ ! -L "$SUBDOMAIN_DOCROOT" ]; then mv "$SUBDOMAIN_DOCROOT" "${SUBDOMAIN_DOCROOT}.bak-$(date +%F-%H%M%S)"; fi
+    - if [ -d "$SUBDOMAIN_DOCROOT" ] && [ ! -L "$SUBDOMAIN_DOCROOT" ]; then mv "$SUBDOMAIN_DOCROOT" "${SUBDOMAIN_DOCROOT}.bak-$(date +%s)"; fi
     - /bin/ln -snf "$RELEASE/public" "$SUBDOMAIN_DOCROOT"
 
-    # 9) Artisan rutin
     - /usr/local/bin/php "$RELEASE/artisan" storage:link || true
     - /usr/local/bin/php "$RELEASE/artisan" migrate --force || true
-    - /usr/local/bin/php "$RELEASE/artisan" config:cache
-    - /usr/local/bin/php "$RELEASE/artisan" route:cache
-    - /usr/local/bin/php "$RELEASE/artisan" view:cache
+    - /usr/local/bin/php "$RELEASE/artisan" optimize
 
-    # 10) (Opsional) Build asset — lebih aman: commit hasil build ke repo
-    # - /bin/npm --prefix "$RELEASE" ci
-    # - /bin/npm --prefix "$RELEASE" run build
+    - /bin/echo "✅ Deploy MINIMAL+ selesai @ $(date -u +%Y-%m-%dT%H:%M:%SZ)"
