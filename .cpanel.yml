@@ -2,7 +2,7 @@
 deployment:
   tasks:
     # 1️⃣ Masuk ke direktori project
-    - cd /home/ahdirmai/repositories/app/dml-lms
+    - cd /home/ahdirmai/repositories/app/dev-dml-lms
 
     # 2️⃣ Jalankan composer install untuk update dependency
     - /opt/cpanel/composer/bin/composer install --no-interaction --prefer-dist --optimize-autoloader

@@ -3,14 +3,17 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+
+use App\Models\Lms\Enrollment;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +24,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'active_role'
     ];
 
     /**
@@ -44,5 +48,27 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function switchRole(string $roleName): bool
+    {
+        if (! $this->hasRole($roleName)) {
+            return false;
+        }
+        $this->forceFill(['active_role' => $roleName])->save();
+
+        return true;
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class);
+    }
+
+    public function coursesEnrolled()
+    {
+        return $this->belongsToMany(\App\Models\Lms\Course::class, 'enrollments', 'user_id', 'course_id')
+            ->withPivot(['status', 'enrolled_at', 'completed_at'])
+            ->withTimestamps();
     }
 }
