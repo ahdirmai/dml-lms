@@ -104,7 +104,7 @@
 
                         <div class="flex items-center gap-2">
                             <x-ui.button type="submit" color="brand" class="w-full">Apply Filter</x-ui.button>
-                            <a href="{{ route('admin.courses.index') }}"
+                            <a href="{{ route('instructor.courses.index') }}"
                                 class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft w-full">
                                 Reset
                             </a>
@@ -122,7 +122,7 @@
                         of <span class="font-semibold text-dark">{{ $courses->total() }}</span> results
                     </div>
 
-                    <a href="{{ route('admin.courses.create') }}" class="inline-flex items-center justify-center font-semibold rounded-lg transition
+                    <a href="{{ route('instructor.courses.create') }}" class="inline-flex items-center justify-center font-semibold rounded-lg transition
                         focus:outline-none focus:ring-2 focus:ring-offset-2 px-4 py-2 text-sm bg-brand text-white
                         hover:brightness-95 focus:ring-brand">
                         + Create
@@ -207,26 +207,26 @@
 
                                 {{-- ✅ Actions (PERBAIKAN LINK BUILDER & EDIT) --}}
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    {{-- Link Builder: Menggunakan route admin.courses.edit --}}
-                                    <a href="{{ route('admin.courses.edit', $c->id) }}" class="inline-flex items-center justify-center font-semibold rounded-lg border
+                                    {{-- Link Builder: Menggunakan route instructor.courses.edit --}}
+                                    <a href="{{ route('instructor.courses.edit', $c->id) }}" class="inline-flex items-center justify-center font-semibold rounded-lg border
                                        px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Builder</a>
-                                    <a href="{{ route('admin.courses.assign', $c->id) }}"
+                                    <a href="{{ route('instructor.courses.assign', $c->id) }}"
                                         class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
                                         Assign
                                     </a>
 
-                                    <a href="{{ route('admin.courses.progress', $c->id) }}"
+                                    <a href="{{ route('instructor.courses.progress', $c->id) }}"
                                         class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
                                         Progress
                                     </a>
                                     {{-- Link Edit: Bisa dialihkan ke builder juga, atau jika ada halaman edit detail
                                     lain --}}
-                                    {{-- <a href="{{ route('admin.courses.edit', $c->id) }}"
+                                    {{-- <a href="{{ route('instructor.courses.edit', $c->id) }}"
                                         class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">Edit
                                     </a> --}}
 
                                     {{-- Link Delete (Asumsi ada route courses.destroy) --}}
-                                    <form action="{{ route('admin.courses.destroy', $c->id) }}" method="POST"
+                                    <form action="{{ route('instructor.courses.destroy', $c->id) }}" method="POST"
                                         class="inline" onsubmit="return confirm('Delete this course?')">
                                         @csrf
                                         @method('DELETE')

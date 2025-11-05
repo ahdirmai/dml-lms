@@ -13,7 +13,7 @@
         </x-ui.form-field>
 
         <div class="flex items-center justify-end gap-2">
-            <x-ui.button as="a" href="{{ route('admin.tags.index') }}" variant="subtle">Cancel</x-ui.button>
+            <x-ui.button as="a" href="{{ route('instructor.tags.index') }}" variant="subtle">Cancel</x-ui.button>
             <x-ui.button type="submit" variant="primary">{{ ($method ?? 'POST')==='PUT' ? 'Update' : 'Create' }}
             </x-ui.button>
         </div>

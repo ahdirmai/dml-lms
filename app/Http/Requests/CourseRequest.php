@@ -20,7 +20,7 @@ class CourseRequest extends FormRequest
             'description'   => ['required', 'string'],
             'category_id'   => ['required', 'exists:categories,id'],
             'level'         => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
-            'instructor_id' => ['required', 'exists:users,id'],
+            'instructor_id' => ['nullable', 'exists:users,id'],
             'thumbnail'     => ['nullable', 'image', 'max:2048'],
         ];
     }

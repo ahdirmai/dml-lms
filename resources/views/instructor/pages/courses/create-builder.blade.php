@@ -49,7 +49,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
 
 <aside class="w-80 bg-white p-6 shadow-xl flex flex-col fixed h-full overflow-y-auto">
     <div class="flex items-center mb-6">
-        <a href="{{ route('admin.courses.index') }}" class="text-gray-500 hover:text-primary-accent mr-3"
+        <a href="{{ route('instructor.courses.index') }}" class="text-gray-500 hover:text-primary-accent mr-3"
             title="Kembali ke daftar">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -72,8 +72,8 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
         @foreach($course->modules as $module)
         <div class="module-container bg-gray-50 p-3 rounded-lg border border-gray-200"
             data-module-id="{{ $module->id }}">
-            <form action="{{ route('admin.modules.update', $module->id) }}" method="POST" class="module-update-form"
-                data-type="update">
+            <form action="{{ route('instructor.modules.update', $module->id) }}" method="POST"
+                class="module-update-form" data-type="update">
                 @csrf
                 @method('PATCH')
                 <div class="module-header flex justify-between items-center text-gray-700 font-semibold mb-2">
@@ -98,7 +98,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                     data-type="lesson" data-lesson-id="{{ $lesson->id }}" data-module-id="{{ $module->id }}"
                     data-lesson-title="{{ e($lesson->title) }}" data-lesson-description="{{ e($lesson->description) }}"
                     data-lesson-kind="{{ e($lesson->kind) }}" data-lesson-url="{{ e($lesson->content_url) }}"
-                    data-lesson-update-url="{{ route('admin.lessons.update', $lesson->id) }}">
+                    data-lesson-update-url="{{ route('instructor.lessons.update', $lesson->id) }}">
                     <div class="flex items-center">
                         <svg class="w-4 h-4 mr-2 text-gray-500 drag-handle" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
@@ -109,7 +109,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                     </div>
                     <div class="flex items-center">
                         <span class="text-xs {{ $badgeColor }}">{{ $badgeText }}</span>
-                        <form action="{{ route('admin.lessons.destroy', $lesson->id) }}" method="POST"
+                        <form action="{{ route('instructor.lessons.destroy', $lesson->id) }}" method="POST"
                             onsubmit="return confirm('Yakin hapus pelajaran ini?')" class="ml-3">
                             @csrf
                             @method('DELETE')
@@ -120,7 +120,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                 @endforeach
             </div>
 
-            <form action="{{ route('admin.modules.destroy', $module->id) }}" method="POST"
+            <form action="{{ route('instructor.modules.destroy', $module->id) }}" method="POST"
                 onsubmit="return confirm('Yakin hapus modul ini beserta semua pelajaran di dalamnya?')" class="mt-2">
                 @csrf
                 @method('DELETE')
@@ -151,7 +151,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                 Simpan Pengaturan
             </button>
             @isset($course)
-            <form action="{{ route('admin.courses.publish', $course->id) }}" method="POST"
+            <form action="{{ route('instructor.courses.publish', $course->id) }}" method="POST"
                 onsubmit="return confirm('Pastikan semua data sudah benar sebelum mempublikasikan.')"
                 style="display:inline;">
                 @csrf
@@ -188,7 +188,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
             <h3 class="text-2xl font-bold text-primary-accent mb-6">Pengaturan Umum</h3>
 
             <form id="course-settings-form"
-                action="{{ isset($course) ? route('admin.courses.update', $course->id) : route('admin.courses.store') }}"
+                action="{{ isset($course) ? route('instructor.courses.update', $course->id) : route('instructor.courses.store') }}"
                 method="POST" enctype="multipart/form-data" class="space-y-6">
                 @csrf
                 @isset($course) @method('PATCH') @endisset
@@ -237,7 +237,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                         <option value="advanced" @selected($currentLevel==='advanced' )>Advanced</option>
                     </select>
                 </div>
-                <div>
+                {{-- <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Instruktur</label>
                     <select name="instructor_id" id="instructor_id"
                         class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
@@ -249,7 +249,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                         </option>
                         @endforeach
                     </select>
-                </div>
+                </div> --}}
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Thumbnail</label>
                     <input type="file" name="thumbnail" id="thumbnail" accept="image/*"
@@ -265,9 +265,9 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
             <h3 class="text-2xl font-bold text-primary-accent mb-6" id="lesson-create-title">
                 {{ $isEditMode ? 'Edit Pelajaran: ' . ($lessonToEdit->title ?? '') : 'Tambah Pelajaran Baru' }}
             </h3>
-            <form action="{{ $isEditMode ? route('admin.lessons.update', $lessonToEdit->id) : '' }}" method="POST"
+            <form action="{{ $isEditMode ? route('instructor.lessons.update', $lessonToEdit->id) : '' }}" method="POST"
                 id="lesson-create-form" class="space-y-6"
-                data-store-template="{{ route('admin.lessons.store', ['module' => 'MODULE_ID']) }}">
+                data-store-template="{{ route('instructor.lessons.store', ['module' => 'MODULE_ID']) }}">
                 @csrf
                 @if($isEditMode)
                 @method('PATCH')
@@ -322,7 +322,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
 <div id="module-create-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 justify-center items-center">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
         <h3 class="text-xl font-bold text-gray-800 mb-4">Nama Modul Baru</h3>
-        <form action="{{ isset($course) ? route('admin.modules.store', $course->id) : '#' }}" method="POST"
+        <form action="{{ isset($course) ? route('instructor.modules.store', $course->id) : '#' }}" method="POST"
             id="module-create-form">
             @csrf
             <div class="mb-4">
@@ -503,7 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // -- Edit (Rename) Module: open, submit via fetch PATCH, update UI tanpa reload
   window.openRenameModal = (moduleId,currentTitle)=>{
-    const renameUrl = '{{ route('admin.modules.update', ['module' => ':id']) }}'.replace(':id', moduleId);
+    const renameUrl = '{{ route('instructor.modules.update', ['module' => ':id']) }}'.replace(':id', moduleId);
     renameForm.action = renameUrl;
     renameForm.dataset.moduleId = moduleId;
     renameInput.value = currentTitle;
@@ -576,7 +576,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if(activeCourseId){
     if (IS_EDIT_MODE && LESSON_DATA){
       renderLessonFields(LESSON_DATA.kind, LESSON_DATA.content_url || '');
-      const updateUrlTemplate = '{{ route('admin.lessons.update', ['lesson' => ':id']) }}';
+      const updateUrlTemplate = '{{ route('instructor.lessons.update', ['lesson' => ':id']) }}';
       lessonCreateForm.action = updateUrlTemplate.replace(':id', LESSON_DATA.id);
       ensurePatch(lessonCreateForm);
       setHeaderForLessonMode();

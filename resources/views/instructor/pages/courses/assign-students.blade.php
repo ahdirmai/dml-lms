@@ -8,7 +8,7 @@
 
         </div>
     </x-slot>
-    <a href="{{ route('admin.courses.index') }}"
+    <a href="{{ route('instructor.courses.index') }}"
         class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft">
         ← Back to Course Management
     </a>
@@ -71,7 +71,7 @@
                         </form>
                     </div>
 
-                    <form method="POST" action="{{ route('admin.courses.assign.store', $course->id) }}">
+                    <form method="POST" action="{{ route('instructor.courses.assign.store', $course->id) }}">
                         @csrf
                         <div class="p-4 overflow-x-auto">
                             <table class="min-w-full text-sm text-left divide-y divide-soft">
@@ -153,7 +153,7 @@
                                     </td>
                                     <td class="px-3 py-2 text-right">
                                         <form
-                                            action="{{ route('admin.courses.assign.remove', [$course->id, $en->user->id]) }}"
+                                            action="{{ route('instructor.courses.assign.remove', [$course->id, $en->user->id]) }}"
                                             method="POST" class="inline remove-student-form"
                                             onsubmit="return confirmRemoveStudent(event, this, '{{ $en->user->name }}')">
                                             @csrf

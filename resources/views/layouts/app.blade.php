@@ -84,22 +84,22 @@
     'group' => 'Course Management',
     'label' => 'Courses',
     'icon' => 'book',
-    'href' => route('admin.courses.index'),
-    'active' => request()->routeIs('admin.courses.*'),
+    'href' => route('instructor.courses.index'),
+    'active' => request()->routeIs('instructor.courses.*'),
     ],
     [
     'group' => 'Course Management',
     'label' => 'Categories',
     'icon' => 'folder',
-    'href' => route('admin.categories.index'),
-    'active' => request()->routeIs('admin.categories.*'),
+    'href' => route('instructor.categories.index'),
+    'active' => request()->routeIs('instructor.categories.*'),
     ],
     [
     'group' => 'Course Management',
     'label' => 'Tags',
     'icon' => 'tag',
-    'href' => route('admin.tags.index'),
-    'active' => request()->routeIs('admin.tags.*'),
+    'href' => route('instructor.tags.index'),
+    'active' => request()->routeIs('instructor.tags.*'),
     ],
     ]);
     }

@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-dark leading-tight">Create Category</h2>
             <x-ui.breadcrumbs :items="[
         ['label'=>'Dashboard','href'=>route('dashboard')],
-        ['label'=>'Categories','href'=>route('admin.categories.index')],
+        ['label'=>'Categories','href'=>route('instructor.categories.index')],
         ['label'=>'Create'],
       ]" />
         </div>
@@ -14,8 +14,8 @@
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg">
                 <div class="p-6">
-                    @include('admin.pages.categories._form', [
-                    'action' => route('admin.categories.store'),
+                    @include('instructor.pages.categories._form', [
+                    'action' => route('instructor.categories.store'),
                     'method' => 'POST',
                     'category' => null,
                     ])

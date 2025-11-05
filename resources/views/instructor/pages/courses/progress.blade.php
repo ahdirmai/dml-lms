@@ -1,4 +1,4 @@
-{{-- resources/views/admin/pages/courses/progress.blade.php --}}
+{{-- resources/views/instructor/pages/courses/progress.blade.php --}}
 <x-app-layout :title="'Progress — ' . $course->title">
     <x-slot name="header">
         <div class="flex items-center justify-between">
@@ -9,7 +9,7 @@
         </div>
     </x-slot>
 
-    <a href="{{ route('admin.courses.index') }}"
+    <a href="{{ route('instructor.courses.index') }}"
         class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft">
         ← Back to Course Management
     </a>
@@ -151,7 +151,7 @@
                     </x-ui.select>
                     <div class="flex items-center gap-2">
                         <x-ui.button type="submit" color="brand" class="w-full">Apply</x-ui.button>
-                        <a href="{{ route('admin.courses.progress', $course->id ?? null) }}"
+                        <a href="{{ route('instructor.courses.progress', $course->id ?? null) }}"
                             class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft w-full">
                             Reset
                         </a>
@@ -262,7 +262,7 @@
                             kursus.</li>
                         <li>Jika semua lesson completed → ubah status enrollment ke <strong>completed</strong> dan
                             trigger generate certificate.</li>
-                        <li>Akses hanya untuk student pemilik, instructor kursus, dan admin.</li>
+                        <li>Akses hanya untuk student pemilik, instructor kursus, dan instructor.</li>
                         <li>Gunakan event (LessonCompleted → Recalculate Course Progress) untuk update realtime.</li>
                     </ul>
                 </div>

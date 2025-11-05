@@ -17,12 +17,12 @@
                         <x-ui.input name="q" value="{{ $q }}" placeholder="Search name/slug" class="w-64" />
                         <x-ui.button type="submit" variant="primary">Filter</x-ui.button>
                         @if(request()->filled('q'))
-                        <x-ui.button as="a" href="{{ route('admin.categories.index') }}" variant="subtle">Reset
+                        <x-ui.button as="a" href="{{ route('instructor.categories.index') }}" variant="subtle">Reset
                         </x-ui.button>
                         @endif
                     </form>
 
-                    <x-ui.button as="a" href="{{ route('admin.categories.create') }}" variant="primary">+ Create
+                    <x-ui.button as="a" href="{{ route('instructor.categories.create') }}" variant="primary">+ Create
                     </x-ui.button>
                 </div>
             </div>
@@ -46,9 +46,9 @@
                                 <x-ui.td>{{ Str::limit($c->description, 80) }}</x-ui.td>
                                 <x-ui.td align="right">
                                     <div class="flex justify-end gap-2">
-                                        <x-ui.button as="a" href="{{ route('admin.categories.edit',$c) }}" size="sm"
-                                            variant="outline">Edit</x-ui.button>
-                                        <form action="{{ route('admin.categories.destroy',$c) }}" method="POST"
+                                        <x-ui.button as="a" href="{{ route('instructor.categories.edit',$c) }}"
+                                            size="sm" variant="outline">Edit</x-ui.button>
+                                        <form action="{{ route('instructor.categories.destroy',$c) }}" method="POST"
                                             onsubmit="return confirm('Delete this category?')">
                                             @csrf @method('DELETE')
                                             <x-ui.button type="submit" size="sm" variant="danger">Delete</x-ui.button>
