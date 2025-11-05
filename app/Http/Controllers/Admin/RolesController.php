@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Throwable;
 
 class RolesController extends Controller
 {
@@ -38,19 +40,34 @@ class RolesController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:100', 'unique:roles,name'],
-            'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
+            'name'            => ['required', 'string', 'max:100', 'unique:roles,name'],
+            'permissions'     => ['nullable', 'array'],
+            'permissions.*'   => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
         ]);
 
-        $role = Role::create([
-            'name' => $data['name'],
-            'guard_name' => 'web',
-        ]);
+        try {
+            DB::beginTransaction();
 
-        $role->syncPermissions($data['permissions'] ?? []);
+            $role = Role::create([
+                'name'       => $data['name'],
+                'guard_name' => 'web',
+            ]);
 
-        return redirect()->route('admin.roles.index')->with('success', 'Role created.');
+            // Sinkronisasi permission
+            $role->syncPermissions($data['permissions'] ?? []);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.roles.index')
+                ->with('success', 'Role created.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create role: ' . $e->getMessage());
+        }
     }
 
     public function edit(Role $role)
@@ -72,30 +89,80 @@ class RolesController extends Controller
         abort_unless($role->guard_name === 'web', 404);
 
         $data = $request->validate([
-            'name'          => ['required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($role->id)],
-            'permissions'   => ['nullable', 'array'],
-            'permissions.*' => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
+            'name'            => ['required', 'string', 'max:100', Rule::unique('roles', 'name')->ignore($role->id)],
+            'permissions'     => ['nullable', 'array'],
+            'permissions.*'   => ['string', Rule::exists('permissions', 'name')->where('guard_name', 'web')],
         ]);
 
-        $role->name = $data['name'];
-        $role->save();
+        try {
+            DB::beginTransaction();
 
-        $role->syncPermissions($data['permissions'] ?? []);
+            // Kunci baris role untuk mencegah race condition (opsional)
+            $fresh = Role::query()
+                ->whereKey($role->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        return redirect()->route('admin.roles.index')->with('success', 'Role updated.');
+            $fresh->name = $data['name'];
+            $fresh->save();
+
+            $fresh->syncPermissions($data['permissions'] ?? []);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.roles.index')
+                ->with('success', 'Role updated.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update role: ' . $e->getMessage());
+        }
     }
 
     public function destroy(Role $role)
     {
         abort_unless($role->guard_name === 'web', 404);
 
-        // Opsional: cegah hapus superadmin
+        // Lindungi role inti
         if ($role->name === 'superadmin') {
             return back()->with('error', 'Superadmin cannot be deleted.');
         }
 
-        $role->delete();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.roles.index')->with('success', 'Role deleted.');
+            // Kunci baris role
+            $fresh = Role::query()
+                ->whereKey($role->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Cek apakah role masih terpasang pada user
+            $attachedUsers = method_exists($fresh, 'users') ? $fresh->users()->exists() : false;
+            if ($attachedUsers) {
+                DB::rollBack();
+                return back()->with('error', 'Cannot delete: role is still assigned to one or more users.');
+            }
+
+            // Optional: detach permissions dulu (tidak wajib, tapi rapi)
+            $fresh->permissions()->detach();
+
+            $name = $fresh->name;
+            $fresh->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.roles.index')
+                ->with('success', "Role \"{$name}\" deleted.");
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->with('error', 'Failed to delete role: ' . $e->getMessage());
+        }
     }
 }

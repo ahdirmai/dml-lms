@@ -7,7 +7,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
+use Throwable;
 
 class UsersController extends Controller
 {
@@ -52,27 +54,39 @@ class UsersController extends Controller
             'roles.*'  => ['string', Rule::exists('roles', 'name')],
         ]);
 
-        $user = new User();
-        $user->name  = $data['name'];
-        $user->email = $data['email'];
-        $user->password = Hash::make($data['password']);
-        $user->email_verified_at = now();
-        $user->save();
+        try {
+            DB::beginTransaction();
 
-        // Default role: student
-        $assignRoles = collect($data['roles'] ?? [])->filter()->values()->all();
-        if (! in_array('student', $assignRoles, true)) {
-            $assignRoles[] = 'student';
-        }
-        $user->syncRoles($assignRoles);
-
-        // Set active_role bila kosong
-        if (empty($user->active_role)) {
-            $user->active_role = $assignRoles[0] ?? 'student';
+            $user = new User();
+            $user->name  = $data['name'];
+            $user->email = $data['email'];
+            $user->password = Hash::make($data['password']);
+            $user->email_verified_at = now();
             $user->save();
-        }
 
-        return redirect()->route('admin.users.index')->with('success', 'User created.');
+            // Default role: student
+            $assignRoles = collect($data['roles'] ?? [])->filter()->values()->all();
+            if (! in_array('student', $assignRoles, true)) {
+                $assignRoles[] = 'student';
+            }
+            $user->syncRoles($assignRoles);
+
+            // Set active_role bila kosong
+            if (empty($user->active_role)) {
+                $user->active_role = $assignRoles[0] ?? 'student';
+                $user->save();
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.users.index')->with('success', 'User created.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create user: ' . $e->getMessage());
+        }
     }
 
     public function edit(User $user)
@@ -85,48 +99,65 @@ class UsersController extends Controller
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password' => ['nullable', 'string', 'min:8'],
-            'roles'    => ['nullable', 'array'],
-            'roles.*'  => ['string', Rule::exists('roles', 'name')],
+            'name'        => ['required', 'string', 'max:255'],
+            'email'       => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password'    => ['nullable', 'string', 'min:8'],
+            'roles'       => ['nullable', 'array'],
+            'roles.*'     => ['string', Rule::exists('roles', 'name')],
             'active_role' => ['nullable', Rule::in($request->input('roles', []))],
         ]);
 
-        $user->name  = $data['name'];
-        $user->email = $data['email'];
-        if (!empty($data['password'])) {
-            $user->password = Hash::make($data['password']);
-        }
-        $user->save();
+        try {
+            DB::beginTransaction();
 
+            // Kunci baris user untuk konsistensi
+            $fresh = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-
-        // Role sync (tetap pastikan student ada)
-        $assignRoles = collect($data['roles'] ?? [])->filter()->values()->all();
-        if (! in_array('student', $assignRoles, true)) {
-            $assignRoles[] = 'student';
-        }
-        $user->syncRoles($assignRoles);
-
-
-
-        // Pastikan active_role tetap valid
-        if ($request->filled('active_role')) {
-            $ar = $request->string('active_role');
-            // hanya simpan jika termasuk dalam roles yang dipilih
-            $selectedRoles = collect($request->input('roles', []))->filter()->values();
-            if ($selectedRoles->contains($ar)) {
-                $user->active_role = $ar;
-                $user->save();
-            } else {
-                // jika tidak konsisten, kamu bisa fallback ke null/abaikan:
-                $user->active_role = null;
-                $user->save();
+            $fresh->name  = $data['name'];
+            $fresh->email = $data['email'];
+            if (!empty($data['password'])) {
+                $fresh->password = Hash::make($data['password']);
             }
-        }
+            $fresh->save();
 
-        return redirect()->route('admin.users.index')->with('success', 'User updated.');
+            // Role sync (pastikan 'student' selalu ada)
+            $assignRoles = collect($data['roles'] ?? [])->filter()->values()->all();
+            if (! in_array('student', $assignRoles, true)) {
+                $assignRoles[] = 'student';
+            }
+            $fresh->syncRoles($assignRoles);
+
+            // Pastikan active_role tetap valid
+            if ($request->filled('active_role')) {
+                $ar = $request->string('active_role');
+                $selectedRoles = collect($request->input('roles', []))->filter()->values();
+                if ($selectedRoles->contains($ar)) {
+                    $fresh->active_role = $ar;
+                } else {
+                    $fresh->active_role = null; // fallback jika tidak konsisten
+                }
+                $fresh->save();
+            } else {
+                // Jika tidak dikirim, tetapi active_role lama tidak ada di roles baru, fallback
+                if ($fresh->active_role && ! in_array($fresh->active_role, $assignRoles, true)) {
+                    $fresh->active_role = $assignRoles[0] ?? 'student';
+                    $fresh->save();
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.users.index')->with('success', 'User updated.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update user: ' . $e->getMessage());
+        }
     }
 
     public function destroy(User $user)
@@ -136,7 +167,27 @@ class UsersController extends Controller
             return back()->with('error', 'Tidak dapat menghapus akun sendiri.');
         }
 
-        $user->delete();
-        return redirect()->route('admin.users.index')->with('success', 'User deleted.');
+        try {
+            DB::beginTransaction();
+
+            // Kunci baris user
+            $fresh = User::query()
+                ->whereKey($user->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Optional: detach roles dulu agar bersih (Spatie biasanya handle, tapi ini rapi)
+            // $fresh->roles()->detach();
+
+            $fresh->delete();
+
+            DB::commit();
+
+            return redirect()->route('admin.users.index')->with('success', 'User deleted.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()->with('error', 'Failed to delete user: ' . $e->getMessage());
+        }
     }
 }

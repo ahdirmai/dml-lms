@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
+use Throwable;
 
 class PermissionsController extends Controller
 {
@@ -34,12 +36,26 @@ class PermissionsController extends Controller
             'name' => ['required', 'string', 'max:150', 'unique:permissions,name'],
         ]);
 
-        Permission::create([
-            'name' => $data['name'],
-            'guard_name' => 'web',
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission created.');
+            Permission::create([
+                'name'       => $data['name'],
+                'guard_name' => 'web',
+            ]);
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.permissions.index')
+                ->with('success', 'Permission created.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create permission: ' . $e->getMessage());
+        }
     }
 
     public function edit(Permission $permission)
@@ -54,21 +70,65 @@ class PermissionsController extends Controller
         abort_unless($permission->guard_name === 'web', 404);
 
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:150', Rule::unique('permissions', 'name')->ignore($permission->id)],
+            'name' => [
+                'required',
+                'string',
+                'max:150',
+                Rule::unique('permissions', 'name')->ignore($permission->id),
+            ],
         ]);
 
-        $permission->name = $data['name'];
-        $permission->save();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission updated.');
+            $permission->name = $data['name'];
+            $permission->save();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.permissions.index')
+                ->with('success', 'Permission updated.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update permission: ' . $e->getMessage());
+        }
     }
 
     public function destroy(Permission $permission)
     {
         abort_unless($permission->guard_name === 'web', 404);
 
-        $permission->delete();
+        try {
+            DB::beginTransaction();
 
-        return redirect()->route('admin.permissions.index')->with('success', 'Permission deleted.');
+            // Cegah penghapusan jika masih terpasang pada role atau user
+            $rolesCount = $permission->roles()->count();
+            $usersCount = method_exists($permission, 'users') ? $permission->users()->count() : 0;
+
+            if ($rolesCount > 0 || $usersCount > 0) {
+                DB::rollBack();
+                return redirect()
+                    ->route('admin.permissions.index')
+                    ->with('error', "Cannot delete: permission is attached to {$rolesCount} role(s) and {$usersCount} user(s).");
+            }
+
+            $permission->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.permissions.index')
+                ->with('success', 'Permission deleted.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return redirect()
+                ->route('admin.permissions.index')
+                ->with('error', 'Failed to delete permission: ' . $e->getMessage());
+        }
     }
 }
