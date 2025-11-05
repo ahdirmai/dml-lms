@@ -74,12 +74,14 @@
             </div>
 
             {{-- ===== Filter Card ===== --}}
+            {{-- ===== Filter Card (Updated) ===== --}}
             <x-ui.card class="mb-4">
                 <div class="">
-                    <form method="GET" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    {{-- Updated grid-cols-5 to accommodate 5 filter fields + buttons --}}
+                    <form method="GET" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
                         {{-- Search --}}
                         <x-ui.input name="q" :value="request('q')" placeholder="Search title or description"
-                            class="w-full" />
+                            class="w-full lg:col-span-2" />
 
                         {{-- Status --}}
                         <x-ui.select name="status">
@@ -102,7 +104,33 @@
                             @endforeach
                         </x-ui.select>
 
-                        <div class="flex items-center gap-2">
+                        {{-- New: Instructor Filter (Assuming $instructors is passed from controller) --}}
+                        <x-ui.select name="instructor_id">
+                            <option value="">All Instructors</option>
+                            @foreach($instructors as $instructor)
+                            <option value="{{ $instructor->id }}"
+                                @selected((string)request('instructor_id')===(string)$instructor->
+                                id)>
+                                {{ $instructor->name }}
+                            </option>
+                            @endforeach
+                        </x-ui.select>
+
+                        {{-- New: Sort By Filter --}}
+                        <x-ui.select name="sort">
+                            <option value="date_desc" @selected(request('sort', 'date_desc' )==='date_desc' )>Latest
+                            </option>
+                            <option value="date_asc" @selected(request('sort')==='date_asc' )>Oldest</option>
+                            <option value="title_asc" @selected(request('sort')==='title_asc' )>Title (A-Z)</option>
+                            <option value="title_desc" @selected(request('sort')==='title_desc' )>Title (Z-A)</option>
+                            <option value="status_asc" @selected(request('sort')==='status_asc' )>Status (Draft First)
+                            </option>
+                            <option value="status_desc" @selected(request('sort')==='status_desc' )>Status (Published
+                                First)
+                            </option>
+                        </x-ui.select>
+
+                        <div class="flex items-center gap-2 lg:col-span-2">
                             <x-ui.button type="submit" color="brand" class="w-full">Apply Filter</x-ui.button>
                             <a href="{{ route('admin.courses.index') }}"
                                 class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft w-full">

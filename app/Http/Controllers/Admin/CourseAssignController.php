@@ -48,7 +48,7 @@ class CourseAssignController extends Controller
         $data = $request->validate([
             'user_ids'   => ['required', 'array', 'min:1'],
             'user_ids.*' => ['integer', 'exists:users,id'],
-        ], ['user_ids.required' => 'Pilih minimal satu mahasiswa.']);
+        ], ['user_ids.required' => 'Pilih minimal satu karyawan.']);
 
         // bulk upsert (unique: user_id, course_id)
         $now = now();
@@ -64,7 +64,10 @@ class CourseAssignController extends Controller
         // gunakan insertOrIgnore agar tidak error jika ada yang sudah ada
         LmsEnrollment::insertOrIgnore($rows);
 
-        return back()->with('success', 'Mahasiswa berhasil di-assign ke kursus.');
+        // TODO = send email ke user yang diassign jika sattus course sudah published
+
+
+        return back()->with('success', 'karyawan berhasil di-assign ke kursus.');
     }
 
     public function remove(Course $course, User $user)
@@ -73,6 +76,6 @@ class CourseAssignController extends Controller
             ->where('user_id', $user->id)
             ->delete();
 
-        return back()->with('success', 'Mahasiswa dihapus dari kursus.');
+        return back()->with('success', 'karyawan dihapus dari kursus.');
     }
 }

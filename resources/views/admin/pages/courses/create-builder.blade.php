@@ -1,7 +1,7 @@
 {{-- resources/views/admin/courses/create-builder.blade.php --}}
 @extends('layouts.builder')
 
-@section('title', 'Buat Kursus Baru - Kreator Hub')
+@section('title', 'Create New Course - DML Learning Management System')
 
 @push('styles')
 <style>
@@ -55,7 +55,7 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
         </a>
-        <h1 class="text-xl font-bold text-gray-800">Editor Kursus Baru</h1>
+        <h1 class="text-xl font-bold text-gray-800">Back To Course Management</h1>
     </div>
 
     <h3 class="text-sm uppercase font-bold text-gray-500 mb-2 border-b pb-1">Pengaturan</h3>
@@ -168,6 +168,12 @@ $isEditMode = isset($lessonToEdit) && $lessonToEdit;
     @if (session('success'))
     <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
         <span class="block sm:inline">{{ session('success') }}</span>
+    </div>
+    @endif
+
+    @if (session('error'))
+    <div class="bg-green-100 border border-green-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        <span class="block sm:inline">{{ session('error') }}</span>
     </div>
     @endif
     @if ($errors->any())
