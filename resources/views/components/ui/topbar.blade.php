@@ -1,16 +1,12 @@
-@props(['avatar' => null,
-'header'=>null])
+@props(['avatar' => null, 'header' => null])
 
-<header class="flex justify-between items-center bg-white p-4 rounded-xl shadow mb-6">
-    {{-- 🔍 Search Bar --}}
+<header class="flex justify-between items-center bg-white p-4 rounded-xl shadow mb-6 relative">
+    {{-- 🔍 Header --}}
     <div class="relative w-full max-w-sm">
         @isset($header)
-        {{-- <header class="mb-6"> --}}
-            <h2 class="text-xl font-semibold text-dark">
-                {{ $header }}
-            </h2>
-            {{--
-        </header>x --}}
+        <h2 class="text-xl font-semibold text-dark">
+            {{ $header }}
+        </h2>
         @endisset
     </div>
 
@@ -24,23 +20,22 @@
             <span class="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent"></span>
         </button>
 
-        {{-- 👤 Avatar + Dropdown --}}
         @php
         $user = auth()->user();
         $roleNames = $user?->getRoleNames() ?? collect();
         $activeRole = $user?->active_role ?? $roleNames->first();
         @endphp
 
-        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
-            <button @click="open = !open"
+        {{-- 👤 Avatar + Dropdown --}}
+        <div class="relative">
+            <button id="avatarBtn"
                 class="flex items-center focus:outline-none focus:ring-2 focus:ring-brand rounded-full">
                 <img src="{{ $avatar ?? 'https://via.placeholder.com/40' }}" alt="User Avatar"
                     class="w-10 h-10 rounded-full border-2 border-brand shadow">
             </button>
 
-            {{-- Dropdown --}}
-            <div x-cloak x-show="open" x-transition
-                class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-soft overflow-hidden z-50">
+            <div id="dropdownProfile"
+                class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-soft overflow-hidden z-50">
                 <div class="px-4 py-3 border-b border-soft">
                     <p class="text-sm font-semibold text-dark">{{ $user?->name }}</p>
                     <p class="text-xs text-dark/60 truncate">{{ $user?->email }}</p>
@@ -57,7 +52,6 @@
                         </span>
                     </div>
 
-                    {{-- Switcher --}}
                     @if($roleNames->count() > 1)
                     <form action="{{ route('switch.role') }}" method="POST">
                         @csrf
@@ -93,3 +87,24 @@
         </div>
     </div>
 </header>
+
+{{-- 🎯 Vanilla JS for Dropdown --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const avatarBtn = document.getElementById('avatarBtn');
+        const dropdown = document.getElementById('dropdownProfile');
+
+        if (avatarBtn && dropdown) {
+            avatarBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdown.classList.contains('hidden') && !avatarBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>

@@ -9,10 +9,11 @@
     <title>{{ $title }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     {{--
-    <link rel="preload" as="style" href="{{ asset('build/assets/app-C_ju9-rv.css') }}">
-    <link rel="modulepreload" as="script" href="{{ asset('build/assets/app-CE7cBmaw.js') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-C_ju9-rv.css') }}"> --}}
+    <link rel="preload" as="style" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
+    <link rel="modulepreload" as="script" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
+    <link rel="stylesheet" href="{{ asset('build/assets/app-DaDlh1KL.css') }}"> --}}
 </head>
 
 <body class="bg-soft min-h-screen antialiased">
