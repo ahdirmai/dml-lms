@@ -10,6 +10,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    @stack('styles')
     {{--
     <link rel="preload" as="style" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
     <link rel="modulepreload" as="script" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
@@ -23,18 +24,50 @@
     $roleNames = $me?->getRoleNames() ?? collect();
     $activeRole = $me?->active_role ?? $roleNames->first();
 
-    $sidebarItems = [
+    $sidebarItems = [];
+
+    /**
+    * Helper kecil untuk menambahkan banyak item sekaligus.
+    * @param array $target
+    * @param array $items
+    */
+    $pushMany = function (&$target, array $items) {
+    foreach ($items as $it) {
+    $target[] = $it;
+    }
+    };
+
+    if ($activeRole === 'student') {
+    $pushMany($sidebarItems, [
     [
     'group' => null,
     'label' => 'Dashboard',
     'icon' => 'home',
-    'href' => route('dashboard'),
-    'active' => request()->routeIs('dashboard'),
-    ]
-    ];
+    'href' => route('user.dashboard'),
+    'active' => request()->routeIs('user.dashboard'),
+    ],[
+    'group' => null,
+    'label' => 'My Courses',
+    'icon' => 'book',
+    'href' => route('user.courses.index'),
+    'active' => request()->routeIs('user.courses.index'),
+    ],
+    ]);
+    }
 
     if ($activeRole === 'admin') {
-    $sidebarItems = array_merge($sidebarItems, [[
+    $pushMany($sidebarItems, [
+    // Group: null
+    [
+    'group' => null,
+    'label' => 'Dashboard',
+    'icon' => 'home',
+    'href' => route('admin.dashboard'),
+    'active' => request()->routeIs('admin.dashboard'),
+    ],
+
+    // Group: Course Management
+    [
     'group' => 'Course Management',
     'label' => 'Courses',
     'icon' => 'book',
@@ -56,6 +89,7 @@
     'active' => request()->routeIs('admin.tags.*'),
     ],
 
+    // Group: Master Data
     [
     'group' => 'Master Data',
     'label' => 'User Management',
@@ -81,7 +115,15 @@
     }
 
     if ($activeRole === 'instructor') {
-    $sidebarItems = array_merge($sidebarItems, [[
+    $pushMany($sidebarItems, [
+    [
+    'group' => null,
+    'label' => 'Dashboard',
+    'icon' => 'home',
+    'href' => route('instructor.dashboard'),
+    'active' => request()->routeIs('instructor.dashboard'),
+    ],
+    [
     'group' => 'Course Management',
     'label' => 'Courses',
     'icon' => 'book',
@@ -105,7 +147,6 @@
     ]);
     }
     @endphp
-
     <div class="flex min-h-screen">
         <x-ui.sidebar :brand="config('app.name')" :items="$sidebarItems" />
 
@@ -119,6 +160,7 @@
             </div>
         </main>
     </div>
+    @stack('scripts')
 </body>
 
 </html>

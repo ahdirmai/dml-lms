@@ -7,6 +7,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'DML Learning Management System')</title>
 
+    {{-- Tailwind via CDN (cukup untuk builder) --}}
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -31,10 +32,10 @@
     @stack('styles')
 </head>
 
-<body class="bg-background-soft flex min-h-screen">
+<body class="bg-background-soft min-h-screen">
     @yield('content')
 
+    @stack('scripts')
 </body>
-@stack('scripts')
 
 </html>
