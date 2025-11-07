@@ -6,7 +6,7 @@
                 Create User
             </h2>
             <x-ui.breadcrumbs :items="[
-                ['label' => 'Dashboard', 'href' => route('dashboard')],
+                ['label' => 'Dashboard', 'href' => route('admin.dashboard')],
                 ['label' => 'Users', 'href' => route('admin.users.index')],
                 ['label' => 'Create']
             ]" />
