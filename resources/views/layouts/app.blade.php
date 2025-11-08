@@ -1,3 +1,4 @@
+{{-- resources/views/layouts/app.blade.php --}}
 @props(['title' => config('app.name', 'LearnFlow')])
 
 <!DOCTYPE html>
@@ -11,10 +12,6 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('styles')
-    {{--
-    <link rel="preload" as="style" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
-    <link rel="modulepreload" as="script" href="{{ asset('build/assets/app-DaDlh1KL.css') }}">
-    <link rel="stylesheet" href="{{ asset('build/assets/app-DaDlh1KL.css') }}"> --}}
 </head>
 
 <body class="bg-soft min-h-screen antialiased">
@@ -147,20 +144,70 @@
     ]);
     }
     @endphp
-    <div class="flex min-h-screen">
+
+    <div class="relative min-h-screen lg:flex">
+        {{-- Sidebar --}}
         <x-ui.sidebar :brand="config('app.name')" :items="$sidebarItems" />
 
-        <main class="ml-64 flex-1 p-6 lg:p-8">
-            <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" :header="$header" />
+        {{-- Backdrop untuk Mobile --}}
+        <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/50 z-30 lg:hidden"></div>
 
+        {{-- Konten Utama --}}
+        <div class="flex-1 lg:ml-64">
+            <main class="p-6 lg:p-8">
+                {{-- Topbar (Header akan disembunyikan di mobile) --}}
+                <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" :header="$header" />
 
+                {{-- Header Terpisah (Hanya tampil di mobile) --}}
+                @isset($header)
+                <h2 class="text-xl font-semibold text-dark mb-6 hidden">
+                    {{ $header }}
+                </h2>
+                @endisset
 
-            <div class=" space-y-8">
-                {{ $slot }}
-            </div>
-        </main>
+                {{-- Slot Konten Halaman --}}
+                <div class="space-y-8">
+                    {{ $slot }}
+                </div>
+            </main>
+        </div>
     </div>
+
     @stack('scripts')
+
+    {{-- JS untuk Sidebar Toggle --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('main-sidebar');
+            const openBtn = document.getElementById('open-sidebar');
+            const closeBtn = document.getElementById('close-sidebar');
+            const backdrop = document.getElementById('sidebar-backdrop');
+
+            const openSidebar = () => {
+                if (sidebar && backdrop) {
+                    sidebar.classList.remove('-translate-x-full');
+                    backdrop.classList.remove('hidden');
+                }
+            };
+
+            const closeSidebar = () => {
+                if (sidebar && backdrop) {
+                    sidebar.classList.add('-translate-x-full');
+                    backdrop.classList.add('hidden');
+                }
+            };
+
+            if (openBtn) {
+                openBtn.addEventListener('click', openSidebar);
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', closeSidebar);
+            }
+            if (backdrop) {
+                backdrop.addEventListener('click', closeSidebar);
+            }
+        });
+    </script>
 </body>
 
 </html>

@@ -1,8 +1,8 @@
 <x-app-layout :title="'Kursus Saya'">
     <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-gray-800">
+        {{-- <h2 class="text-xl font-semibold leading-tight text-gray-800"> --}}
             {{ __('Kursus Saya') }}
-        </h2>
+            {{-- </h2> --}}
     </x-slot>
 
     {{-- Header bar: search + avatar (sederhana) --}}
