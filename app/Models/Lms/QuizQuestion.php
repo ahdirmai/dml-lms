@@ -9,9 +9,10 @@ class QuizQuestion extends Model
 {
     use HasUuids;
 
+    protected $fillable = ['quiz_id', 'question_text', 'question_type', 'order_no', 'score'];
+    protected $casts = ['score' => 'float'];
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'quiz_id', 'question', 'qtype', 'score', 'order'];
 
     public function quiz()
     {

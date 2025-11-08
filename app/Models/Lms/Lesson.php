@@ -9,31 +9,17 @@ class Lesson extends Model
 {
     use HasUuids;
 
+    protected $fillable = ['course_id', 'title', 'slug', 'kind', 'content', 'order_no', 'duration_minutes'];
+    protected $casts = ['duration_minutes' => 'integer'];
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = [
-        'id',
-        'course_id',
-        'module_id',
-        'description',
-        'title',
-        'kind',
-        'content_url',
-        'youtube_video_id',
-        'gdrive_file_id',
-        'order'
-    ];
 
     public function course()
     {
         return $this->belongsTo(Course::class);
     }
-    public function module()
-    {
-        return $this->belongsTo(Module::class);
-    }
     public function quiz()
     {
-        return $this->hasOne(Quiz::class);
-    } // only if kind=quiz
+        return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'regular');
+    }
 }

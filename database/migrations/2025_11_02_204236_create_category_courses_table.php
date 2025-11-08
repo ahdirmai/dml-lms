@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        Schema::create('category_course', function (Blueprint $table) {
+        Schema::create('category_courses', function (Blueprint $table) {
             $table->foreignUuid('category_id')->constrained('categories')->cascadeOnDelete();
             $table->foreignUuid('course_id')->constrained('courses')->cascadeOnDelete();
             $table->primary(['category_id', 'course_id']);
@@ -16,6 +16,6 @@ return new class extends Migration {
 
     public function down(): void
     {
-        Schema::dropIfExists('category_course');
+        Schema::dropIfExists('category_courses');
     }
 };

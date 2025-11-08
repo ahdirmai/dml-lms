@@ -36,7 +36,7 @@ class CourseController extends Controller
 
         $courses = Course::query()
             ->with(['categories:id,name', 'instructor:id,name'])
-            ->withCount(['modules', 'lessons', 'students']) // Tambah students
+            ->withCount(['modules', 'lessons']) // Tambah students
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {
                     $w->where('title', 'like', "%{$q}%")
