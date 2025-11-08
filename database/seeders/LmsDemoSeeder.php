@@ -87,6 +87,7 @@ class LmsDemoSeeder extends Seeder
                 'description' => 'Menjelaskan dasar-dasar framework Laravel dan sejarahnya.',
                 'kind' => 'youtube',
                 'youtube_video_id' => 'dQw4w9WgXcQ',
+                'content_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
                 'order_no' => 1,
             ]
         );
@@ -99,7 +100,9 @@ class LmsDemoSeeder extends Seeder
                 'module_id' => $module->id,
                 'title' => 'Routing di Laravel',
                 'description' => 'Mengenal sistem routing Laravel dan penggunaannya.',
-                'kind' => 'quiz',
+                'gdrive_file_id' => '0B3JHW3-u_LeveE55ZktwYWlYUTQ',
+                'content_url' => 'https://drive.google.com/file/d/0B3JHW3-u_LeveE55ZktwYWlYUTQ/view',
+                'kind' => 'gdrive',
                 'order_no' => 2,
             ]
         );
@@ -171,13 +174,6 @@ class LmsDemoSeeder extends Seeder
             ]],
         ]);
 
-        $this->seedQuestions($lessonQuiz, [
-            ['Route::get("/user") berfungsi untuk?', [
-                ['Menangani request GET ke /user', true],
-                ['Menangani POST /user', false],
-                ['Menjalankan seeder', false],
-            ]],
-        ]);
 
         $this->command->info('✅ LmsDemoSeeder selesai: 1 course + 1 module + 2 lesson + pretest/posttest/quiz terbuat.');
     }
@@ -188,8 +184,8 @@ class LmsDemoSeeder extends Seeder
             $question = QuizQuestion::create([
                 'id' => (string) Str::uuid(),
                 'quiz_id' => $quiz->id,
-                'question' => $text,
-                'qtype' => 'mcq',
+                'question_text' => $text,
+                'question_type' => 'mcq',
                 'score' => 1,
                 'order' => 1,
             ]);

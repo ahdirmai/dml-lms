@@ -5,7 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-    public function up(): void {
+    public function up(): void
+    {
         Schema::table('courses', function (Blueprint $t) {
             if (!Schema::hasColumn('courses', 'has_pretest')) {
                 $t->boolean('has_pretest')->default(false)->after('status');
@@ -30,15 +31,25 @@ return new class extends Migration {
         });
     }
 
-    public function down(): void {
+    public function down(): void
+    {
         Schema::table('courses', function (Blueprint $t) {
-            foreach ([
-                'has_pretest','has_posttest','default_passing_score',
-                'pretest_passing_score','posttest_passing_score','require_pretest_before_content'
-            ] as $col) {
+            foreach (
+                [
+                    'has_pretest',
+                    'has_posttest',
+                    'default_passing_score',
+                    'pretest_passing_score',
+                    'posttest_passing_score',
+                    'require_pretest_before_content'
+                ] as $col
+            ) {
                 if (Schema::hasColumn('courses', $col)) $t->dropColumn($col);
             }
-            try { $t->dropIndex('courses_has_tests_idx'); } catch (\Throwable $e) {}
+            try {
+                $t->dropIndex('courses_has_tests_idx');
+            } catch (\Throwable $e) {
+            }
         });
     }
 };

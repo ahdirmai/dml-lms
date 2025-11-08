@@ -20,8 +20,7 @@ class CourseController extends Controller
     {
         $q              = trim((string) $request->input('q', ''));
         $status         = $request->input('status');
-        // ✅ Mengambil nilai integer dari request
-        $categoryId     = $request->category_id ?: null;
+        $categoryId     = $request->category_id ?: null;          // int/null
         $instructorId   = $request->integer('instructor_id') ?: null;
         $sort           = $request->input('sort', 'date_desc');
 
@@ -29,6 +28,7 @@ class CourseController extends Controller
         if ($status && ! in_array($status, $validStatuses, true)) {
             return back()->withErrors(['status' => 'Status tidak valid.']);
         }
+
         $validSorts = ['date_desc', 'date_asc', 'title_asc', 'title_desc', 'status_asc', 'status_desc'];
         if (!in_array($sort, $validSorts, true)) {
             $sort = 'date_desc';
@@ -36,7 +36,7 @@ class CourseController extends Controller
 
         $courses = Course::query()
             ->with(['categories:id,name', 'instructor:id,name'])
-            ->withCount(['modules', 'lessons']) // Tambah students
+            ->withCount(['modules', 'lessons'])
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {
                     $w->where('title', 'like', "%{$q}%")
@@ -45,16 +45,11 @@ class CourseController extends Controller
                 });
             })
             ->when($status, fn($qq) => $qq->where('status', $status))
-
-            // 🚀 BAGIAN PERBAIKAN CATEGORY FILTER
             ->when($categoryId, function ($qq) use ($categoryId) {
                 $qq->whereHas('categories', function ($w) use ($categoryId) {
-                    // Pastikan nilai yang dibandingkan adalah integer
-                    $w->where('categories.id',  $categoryId);
+                    $w->where('categories.id', (int) $categoryId);
                 });
             })
-            // 🚀 AKHIR PERBAIKAN
-
             ->when($instructorId, fn($qq) => $qq->where('instructor_id', $instructorId))
             ->when($sort, function ($qq) use ($sort) {
                 return match ($sort) {
@@ -74,7 +69,17 @@ class CourseController extends Controller
         $instructors = User::select('id', 'name')->whereHas('roles', function ($q) {
             $q->where('name', 'instructor');
         })->orderBy('name')->get();
-        return view('admin.pages.courses.index', compact('courses', 'categories', 'instructors', 'q', 'status', 'categoryId', 'instructorId', 'sort'));
+
+        return view('admin.pages.courses.index', compact(
+            'courses',
+            'categories',
+            'instructors',
+            'q',
+            'status',
+            'categoryId',
+            'instructorId',
+            'sort'
+        ));
     }
 
     public function create()
@@ -83,6 +88,7 @@ class CourseController extends Controller
         $instructors = User::select('id', 'name')->whereHas('roles', function ($q) {
             $q->where('name', 'instructor');
         })->orderBy('name')->get();
+
         return view('admin.pages.courses.create-builder', compact('categories', 'instructors'));
     }
 
@@ -92,12 +98,13 @@ class CourseController extends Controller
             'categories:id,name',
             'instructor:id,name',
             'modules' => fn($q) => $q->orderBy('order'),
-            'modules.lessons' => fn($q) => $q->orderBy('order'),
+            'modules.lessons' => fn($q) => $q->orderBy('order_no'),
             'modules.lessons.quiz',
         ]);
 
         $categories  = Category::select('id', 'name')->orderBy('name')->get();
         $instructors = User::select('id', 'name')->orderBy('name')->get();
+
         return view('admin.pages.courses.create-builder', compact('categories', 'instructors', 'course'));
     }
 
@@ -115,19 +122,38 @@ class CourseController extends Controller
                 ? $request->file('thumbnail')->store('courses', 'public')
                 : null;
 
+            // Ambil difficulty dari form baru; fallback ke 'level' untuk kompatibilitas lama.
+            $difficulty   = $data['difficulty'] ?? $data['level'] ?? 'beginner';
+            $categoryId   = isset($data['category_id']) ?  $data['category_id'] : null;
+            $instructorId = $data['instructor_id'] ?? null;
+
+            // --- NEW: flags pre/post & requirement dari checkbox ---
+            $hasPre   = $request->boolean('has_pretest');
+            $hasPost  = $request->boolean('has_posttest');
+            $reqBefore = $request->boolean('require_pretest_before_content');
+
             $course = Course::create([
-                'id'             => (string) Str::uuid(),
-                'title'          => $data['title'],
-                'slug'           => Str::slug($data['title']) . '-' . Str::random(5),
-                'subtitle'       => $data['subtitle'] ?? null,
-                'description'    => $data['description'],
-                'thumbnail_path' => $thumb,
-                'status'         => 'draft',
-                'difficulty'     => $data['level'] ?? 'beginner',
-                'instructor_id'  => $data['instructor_id'],
+                'id'                              => (string) Str::uuid(),
+                'title'                           => $data['title'],
+                'slug'                            => Str::slug($data['title']) . '-' . Str::random(5),
+                'subtitle'                        => $data['subtitle'] ?? null,
+                'description'                     => $data['description'],
+                'thumbnail_path'                  => $thumb,
+                'status'                          => 'draft',
+                'difficulty'                      => $difficulty,
+                'instructor_id'                   => $instructorId,
+
+                // --- NEW fields ---
+                'has_pretest'                     => $hasPre,
+                'has_posttest'                    => $hasPost,
+                'require_pretest_before_content'  => $reqBefore,
             ]);
 
-            $course->categories()->sync([$data['category_id']]);
+            if ($categoryId) {
+                $course->categories()->sync([$categoryId]);
+            } else {
+                $course->categories()->sync([]);
+            }
 
             DB::commit();
 
@@ -137,12 +163,10 @@ class CourseController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            // Jika thumbnail sudah terupload tapi gagal di DB, hapus file-nya
             if (isset($thumb) && $thumb && Storage::disk('public')->exists($thumb)) {
                 Storage::disk('public')->delete($thumb);
             }
 
-            // Logging optional (bisa kamu aktifkan)
             Log::error('Gagal membuat kursus baru', ['error' => $e->getMessage()]);
 
             return back()
@@ -150,7 +174,6 @@ class CourseController extends Controller
                 ->with('error', 'Terjadi kesalahan saat membuat kursus: ' . $e->getMessage());
         }
     }
-
     /**
      * Update menggunakan Form POST biasa dan redirect.
      */
@@ -163,30 +186,34 @@ class CourseController extends Controller
 
             // Jika ada thumbnail baru
             if ($request->hasFile('thumbnail')) {
-                // Simpan path lama untuk jaga-jaga jika rollback
                 $oldThumb = $course->thumbnail_path;
-
-                // Upload thumbnail baru
                 $newThumb = $request->file('thumbnail')->store('courses', 'public');
-
-                // Update ke model
                 $course->thumbnail_path = $newThumb;
 
-                // Hapus file lama (setelah upload baru sukses)
                 if ($oldThumb && Storage::disk('public')->exists($oldThumb)) {
                     Storage::disk('public')->delete($oldThumb);
                 }
             }
 
+            // Ambil difficulty dari form baru; fallback ke 'level' untuk kompatibilitas lama.
+            $difficulty   = $data['difficulty'] ?? $data['level'] ?? $course->difficulty;
+            $instructorId = $data['instructor_id'] ?? $course->instructor_id;
+
             $course->fill([
                 'title'         => $data['title'],
                 'subtitle'      => $data['subtitle'] ?? null,
                 'description'   => $data['description'],
-                'difficulty'    => $data['level'] ?? $course->difficulty,
-                'instructor_id' => $data['instructor_id'],
+                'difficulty'    => $difficulty,
+                'instructor_id' => $instructorId,
             ])->save();
 
-            $course->categories()->sync([$data['category_id']]);
+            // Sinkron kategori
+            $categoryId = isset($data['category_id']) ? $data['category_id'] : null;
+            if ($categoryId) {
+                $course->categories()->sync([$categoryId]);
+            } else {
+                $course->categories()->sync([]);
+            }
 
             DB::commit();
 
@@ -196,12 +223,10 @@ class CourseController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            // Jika file baru sudah diupload tapi DB gagal, hapus file baru agar tidak menumpuk
             if (isset($newThumb) && Storage::disk('public')->exists($newThumb)) {
                 Storage::disk('public')->delete($newThumb);
             }
 
-            // Log error opsional
             Log::error('Gagal memperbarui kursus', ['error' => $e->getMessage()]);
 
             return back()
@@ -224,7 +249,6 @@ class CourseController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // Jika sudah published, tidak perlu lanjut
             if ($fresh->status === 'published') {
                 DB::commit();
                 return back()->with('info', 'Kursus sudah dipublikasikan sebelumnya.');
@@ -239,14 +263,16 @@ class CourseController extends Controller
                 return back()->with('error', 'Kursus harus memiliki minimal 1 modul sebelum dipublikasikan.');
             }
 
-            // ✅ Validasi: minimal 1 lesson di total semua modul
+            // ✅ Validasi: minimal 1 lesson total
             $totalLessons = $fresh->modules->sum(fn($m) => $m->lessons->count());
             if ($totalLessons < 1) {
                 DB::rollBack();
                 return back()->with('error', 'Setiap kursus harus memiliki minimal 1 pelajaran (lesson) sebelum dipublikasikan.');
             }
 
-            // ✅ Jika valid, ubah status
+            // (Opsional) Jika nanti toggle using_pretest / using_posttest disimpan ke DB,
+            // tambahkan guard di sini untuk memastikan pretest/posttest sudah dibuat.
+
             $fresh->update([
                 'status'       => 'published',
                 'published_at' => now(),
@@ -254,26 +280,24 @@ class CourseController extends Controller
 
             DB::commit();
 
-            // TODO: Jika ada user yang sudah di-assign, kirim email pemberitahuan (dispatch job/event)
-
             return back()->with('success', 'Kursus berhasil dipublikasikan!');
         } catch (Throwable $e) {
             DB::rollBack();
 
-            // Log opsional:
-            Log::error('Gagal publish kursus', ['course_id' => $course->id, 'error' => $e->getMessage()]);
+            Log::error('Gagal publish kursus', [
+                'course_id' => $course->id,
+                'error'     => $e->getMessage()
+            ]);
 
             return back()->with('error', 'Terjadi kesalahan saat mempublikasikan kursus: ' . $e->getMessage());
         }
     }
-
 
     public function destroy(Course $course)
     {
         try {
             DB::beginTransaction();
 
-            // Kunci baris course untuk mencegah race condition
             $fresh = Course::query()
                 ->whereKey($course->id)
                 ->lockForUpdate()
@@ -281,8 +305,6 @@ class CourseController extends Controller
 
             // Cek: masih ada user yang ter-assign/enrolled?
             $isAssigned = $fresh->enrollments()->exists();
-            // Atau jika kamu ingin double-check via pivot convenience:
-            // $isAssigned = $isAssigned || $fresh->students()->exists();
 
             if ($isAssigned) {
                 DB::rollBack();
@@ -292,20 +314,19 @@ class CourseController extends Controller
             $title    = $fresh->title;
             $oldThumb = $fresh->thumbnail_path;
 
-            // Lepas pivot kategori (jika belum pakai FK cascade di pivot)
+            // Lepas pivot kategori
             $fresh->categories()->detach();
 
-            // Hapus anak jika belum pakai FK cascade di DB (opsional, aktifkan bila perlu)
+            // Hapus anak jika belum pakai FK cascade di DB (opsional)
             $fresh->lessons()->delete();
             $fresh->modules()->delete();
-            $fresh->enrollments()->delete(); // biasanya kosong karena sudah dicek, tapi aman untuk berjaga
+            $fresh->enrollments()->delete();
 
             // Hapus course
             $fresh->delete();
 
             DB::commit();
 
-            // Bersihkan file thumbnail hanya setelah commit sukses
             if ($oldThumb && Storage::disk('public')->exists($oldThumb)) {
                 Storage::disk('public')->delete($oldThumb);
             }
@@ -316,15 +337,7 @@ class CourseController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            // Log opsional:
-            // Log::error('Gagal menghapus course', ['course_id' => $course->id, 'error' => $e->getMessage()]);
-
             return back()->with('error', 'Terjadi kesalahan saat menghapus kursus: ' . $e->getMessage());
         }
     }
-
-    /**
-     * Hapus AJAX endpoint yang tidak digunakan lagi.
-     * showData dihapus.
-     */
 }

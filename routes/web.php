@@ -126,11 +126,21 @@ Route::prefix('admin')
         Route::delete('lessons/{lesson}', [AdminLessonController::class, 'destroy'])->name('lessons.destroy');
         Route::post('modules/{module}/lessons/reorder', [AdminLessonController::class, 'reorder'])->name('lessons.reorder');
 
+        // === Pre/Posttest Store (views-only stage; controller bisa diisi nanti) ===
+        Route::post('courses/{course}/pretest',  [AdminQuizController::class, 'storePretest'])->name('courses.pretest.store');
+        Route::post('courses/{course}/posttest', [AdminQuizController::class, 'storePosttest'])->name('courses.posttest.store');
         // Quizzes
-        Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
-        Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
-        Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
-        Route::delete('questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+
+        Route::prefix('quizzes/{quiz}')->group(function () {
+            Route::post('questions',                             [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+            Route::put('questions/{question}',                 [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+            Route::delete('questions/{question}',                [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+            Route::post('questions/reorder',                     [AdminQuizController::class, 'reorderQuestions'])->name('quizzes.questions.reorder'); // optional
+        });
+        // Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
+        // Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+        // Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+        // Route::delete('questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
 
         // Assignments
         Route::get('courses/{course}/assign-students', [AdminCourseAssignController::class, 'form'])->name('courses.assign');

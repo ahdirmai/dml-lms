@@ -38,7 +38,7 @@ class LessonController extends Controller
             $ids = $this->parseSourceIds($data['kind'], $data['content_url'] ?? null);
 
             // Tentukan urutan berikutnya dengan aman (dalam transaksi)
-            $nextOrder = ((int) Lesson::where('module_id', $freshModule->id)->max('order')) + 1;
+            $nextOrder = ((int) Lesson::where('module_id', $freshModule->id)->max('order_no')) + 1;
 
             $lesson = Lesson::create([
                 'id'               => (string) Str::uuid(),
@@ -50,7 +50,7 @@ class LessonController extends Controller
                 'content_url'      => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
                 'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
-                'order'            => $nextOrder,
+                'order_no'            => $nextOrder,
             ]);
 
             DB::commit();
@@ -72,10 +72,14 @@ class LessonController extends Controller
      */
     public function update(Request $request, Lesson $lesson)
     {
+        // return [$request->all(), $lesson];
+
         $data = $request->validate([
             'title'       => ['required', 'string', 'max:255'],
             'kind'        => ['required', 'in:youtube,gdrive,quiz'],
             'content_url' => ['nullable', 'url'],
+            'description' => ['nullable', 'string'],
+
         ]);
 
         try {
@@ -89,12 +93,14 @@ class LessonController extends Controller
 
             $ids = $this->parseSourceIds($data['kind'], $data['content_url'] ?? null);
 
+            // return $ids;
             $freshLesson->update([
                 'title'            => $data['title'],
                 'kind'             => $data['kind'],
                 'content_url'      => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
                 'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
+                'description' => $data['description'],
             ]);
 
             DB::commit();
@@ -167,7 +173,7 @@ class LessonController extends Controller
                 Lesson::query()
                     ->where('id', $row['id'])
                     ->where('module_id', $freshModule->id)
-                    ->update(['order' => (int) $row['order']]);
+                    ->update(['order_no' => (int) $row['order_no']]);
             }
 
             DB::commit();
