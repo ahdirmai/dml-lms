@@ -238,4 +238,55 @@ class QuizController extends Controller
             return back()->with('error', 'Gagal menyimpan ' . $kind . ': ' . $e->getMessage());
         }
     }
+
+    public function syncFromPretest(Request $request, Course $course)
+    {
+        $pretest  = $course->pretest;
+        $posttest = $course->posttest;
+
+        if (!$pretest) {
+            return back()->with('error', 'Pretest belum dibuat untuk kursus ini.');
+        }
+        if (!$posttest) {
+            return back()->with('error', 'Posttest belum dibuat untuk kursus ini.');
+        }
+
+        DB::transaction(function () use ($pretest, $posttest) {
+            // 1) Bersihkan semua pertanyaan & opsi di posttest (hard sync)
+            $postQIds = $posttest->questions()->pluck('id');
+            if ($postQIds->isNotEmpty()) {
+                QuizOption::whereIn('question_id', $postQIds)->delete();
+                QuizQuestion::whereIn('id', $postQIds)->delete();
+            }
+
+            // 2) Ambil pertanyaan pretest lengkap dengan opsi
+            $preQuestions = $pretest->questions()->with('options')->orderBy('order')->get();
+
+            // 3) Duplikasi ke posttest (pertahankan order & points)
+            foreach ($preQuestions as $q) {
+                /** @var QuizQuestion $newQ */
+                $newQ = QuizQuestion::create([
+                    'id'            => (string) Str::uuid(),
+                    'quiz_id'       => $posttest->id,
+                    'question_text' => $q->question_text,
+                    'points'        => $q->points,
+                    'order'         => $q->order,
+                ]);
+
+                foreach ($q->options as $opt) {
+                    QuizOption::create([
+                        'id'          => (string) Str::uuid(),
+                        'question_id' => $newQ->id,
+                        'option_text' => $opt->option_text,
+                        'is_correct'  => $opt->is_correct,
+                    ]);
+                }
+            }
+        });
+
+        // Jika ingin tetap di tab posttest, boleh tambahkan query ?tab=posttest
+        return redirect()
+            ->back()
+            ->with('success', 'Posttest berhasil disinkronkan dari Pretest.');
+    }
 }

@@ -136,7 +136,12 @@ Route::prefix('admin')
             Route::put('questions/{question}',                 [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
             Route::delete('questions/{question}',                [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
             Route::post('questions/reorder',                     [AdminQuizController::class, 'reorderQuestions'])->name('quizzes.questions.reorder'); // optional
+
+
         });
+
+        Route::post('courses/{course}/posttest/copy-from-pretest', [AdminQuizController::class, 'syncFromPretest'])
+            ->name('courses.posttest.copyFromPretest');
         // Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
         // Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
         // Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');

@@ -82,6 +82,24 @@ return; @endphp
             onclick="BUILDER_QUIZ['{{ $K }}'].open('{{ $existing->id }}')">
             + Tambah Pertanyaan
         </button>
+
+        {{-- Tampilkan hanya untuk POSTTEST dan jika pretest + pertanyaannya ada --}}
+        @if(
+        $kind === \App\Models\Lms\Quiz::KIND_POSTTEST &&
+        method_exists($course, 'pretest') && $course->pretest &&
+        $course->pretest->questions()->exists()
+        )
+        <form method="POST" action="{{ route('admin.courses.posttest.copyFromPretest', $course->id) }}"
+            onsubmit="return confirm('Salin semua pertanyaan dari Pretest ke Posttest?');">
+            @csrf
+            <input type="hidden" name="course_id" value="{{ $course->id }}">
+            {{-- supaya setelah submit tetap kembali ke tab posttest --}}
+            <input type="hidden" name="redirect_tab" value="posttest">
+            <button type="submit" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-xl">
+                Copy dari Pretest
+            </button>
+        </form>
+        @endif
     </div>
 
     @forelse($existing->questions()->with('options')->orderBy('order')->get() as $q)
