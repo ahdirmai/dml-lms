@@ -389,7 +389,6 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
         {{-- VIEW 3: PRETEST --}}
         @if(isset($course))
         <div id="content-pretest" class="hidden">
-            <h3 class="text-2xl font-bold text-primary-accent mb-6">Pengaturan Pretest</h3>
             @include('admin.pages.courses.partials._quiz-form', [
             'course' => $course,
             'kind' => \App\Models\Lms\Quiz::KIND_PRETEST,
@@ -397,12 +396,8 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
             'existing' => method_exists($course,'pretest') ? $course->pretest : null,
             ])
         </div>
-        @endif
 
-        {{-- VIEW 4: POSTTEST --}}
-        @if(isset($course))
         <div id="content-posttest" class="hidden">
-            <h3 class="text-2xl font-bold text-primary-accent mb-6">Pengaturan Posttest</h3>
             @include('admin.pages.courses.partials._quiz-form', [
             'course' => $course,
             'kind' => \App\Models\Lms\Quiz::KIND_POSTTEST,
@@ -411,7 +406,8 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
             ])
         </div>
         @endif
-    </div>
+
+    </div> {{-- end #editor-content --}}
 </main>
 
 {{-- MODAL: CREATE MODULE --}}

@@ -184,36 +184,52 @@ class CourseController extends Controller
         try {
             DB::beginTransaction();
 
-            // Jika ada thumbnail baru
+            // === Thumbnail baru (opsional) ===
             if ($request->hasFile('thumbnail')) {
                 $oldThumb = $course->thumbnail_path;
                 $newThumb = $request->file('thumbnail')->store('courses', 'public');
                 $course->thumbnail_path = $newThumb;
 
-                if ($oldThumb && Storage::disk('public')->exists($oldThumb)) {
+                if (!empty($oldThumb) && Storage::disk('public')->exists($oldThumb)) {
                     Storage::disk('public')->delete($oldThumb);
                 }
             }
 
-            // Ambil difficulty dari form baru; fallback ke 'level' untuk kompatibilitas lama.
-            $difficulty   = $data['difficulty'] ?? $data['level'] ?? $course->difficulty;
+            // === Ambil nilai umum dari form ===
+            $difficulty   = $data['difficulty']  ?? $data['level'] ?? $course->difficulty;
             $instructorId = $data['instructor_id'] ?? $course->instructor_id;
 
+            // === Ambil dan normalisasi flag baru dari checkbox ===
+            $hasPre   = $request->boolean('has_pretest');
+            $hasPost  = $request->boolean('has_posttest');
+            $reqBefore = $request->boolean('require_pretest_before_content');
+
+            // Jika pretest dimatikan, requirement wajib pretest juga harus padam
+            if (!$hasPre && $reqBefore) {
+                $reqBefore = false;
+                // optional: beri info ringan
+                // session()->flash('info', 'Opsi "Wajib pretest sebelum konten" dimatikan karena Pretest nonaktif.');
+            }
+
+            // === Update kolom course ===
             $course->fill([
                 'title'         => $data['title'],
                 'subtitle'      => $data['subtitle'] ?? null,
                 'description'   => $data['description'],
                 'difficulty'    => $difficulty,
                 'instructor_id' => $instructorId,
+
+                // kolom baru
+                'has_pretest'                    => $hasPre,
+                'has_posttest'                   => $hasPost,
+                'require_pretest_before_content' => $reqBefore,
             ])->save();
 
-            // Sinkron kategori
-            $categoryId = isset($data['category_id']) ? $data['category_id'] : null;
-            if ($categoryId) {
-                $course->categories()->sync([$categoryId]);
-            } else {
-                $course->categories()->sync([]);
-            }
+            // === Sinkron kategori ===
+            $categoryId = $data['category_id'] ?? null;
+            $course->categories()->sync($categoryId ? [$categoryId] : []);
+
+
 
             DB::commit();
 

@@ -69,56 +69,57 @@ $optionsId = "qm-options-{$K}";
     <div class="p-4 border rounded-xl bg-yellow-50 text-yellow-800">
         Simpan pengaturan {{ ucfirst($kind) }} terlebih dahulu untuk membuat pertanyaan.
     </div>
-    @php return; @endphp
-    @endif
-
-    {{-- ===== Daftar Pertanyaan ===== --}}
-    <div id="questions-{{ $K }}" class="p-4 border rounded-xl bg-white">
-        <div class="flex items-center justify-between mb-4">
-            <h4 class="text-lg font-semibold">Daftar Pertanyaan ({{ ucfirst($kind) }})</h4>
-            <button type="button" class="bg-secondary-highlight text-white px-4 py-2 rounded-xl"
-                onclick="BUILDER_QUIZ['{{ $K }}'].open('{{ $existing->id }}')">
-                + Tambah Pertanyaan
-            </button>
-        </div>
-
-        @forelse($existing->questions()->with('options')->orderBy('order')->get() as $q)
-        <div class="p-3 border rounded-lg mb-3">
-            <div class="flex items-start justify-between">
-                <div>
-                    <div class="text-sm text-gray-500">#{{ $q->order ?? 0 }} • {{ $q->points }} poin</div>
-                    <div class="font-semibold">{{ $q->question_text }}</div>
-                </div>
-                <div class="flex gap-2">
-                    <button type="button" class="text-blue-600 text-sm hover:underline"
-                        onclick='BUILDER_QUIZ["{{ $K }}"].open("{{ $existing->id }}", @json($q))'>
-                        Edit
-                    </button>
-                    <form action="{{ route('admin.quizzes.questions.destroy', [$existing->id, $q->id]) }}" method="POST"
-                        onsubmit="return confirm('Hapus pertanyaan ini?')">
-                        @csrf @method('DELETE')
-                        <button type="submit" class="text-red-600 text-sm hover:underline">Hapus</button>
-                    </form>
-                </div>
-            </div>
-
-            <ul class="mt-2 ml-5 list-disc">
-                @foreach($q->options as $idx => $opt)
-                <li class="{{ $opt->is_correct ? 'text-green-700 font-semibold' : '' }}">
-                    {{ chr(65 + $idx) }}. {{ $opt->option_text }}
-                    @if($opt->is_correct)
-                    <span class="ml-2 text-xs px-2 py-0.5 rounded bg-green-prd">benar</span>
-                    @endif
-                </li>
-                @endforeach
-            </ul>
-        </div>
-        @empty
-        <div class="p-3 rounded bg-soft text-gray-600">Belum ada pertanyaan.</div>
-        @endforelse
-    </div>
 </div>
+@php
+return; @endphp
+@endif
 
+{{-- ===== Daftar Pertanyaan ===== --}}
+<div id="questions-{{ $K }}" class="p-4 border rounded-xl bg-white">
+    <div class="flex items-center justify-between mb-4">
+        <h4 class="text-lg font-semibold">Daftar Pertanyaan ({{ ucfirst($kind) }})</h4>
+        <button type="button" class="bg-secondary-highlight text-white px-4 py-2 rounded-xl"
+            onclick="BUILDER_QUIZ['{{ $K }}'].open('{{ $existing->id }}')">
+            + Tambah Pertanyaan
+        </button>
+    </div>
+
+    @forelse($existing->questions()->with('options')->orderBy('order')->get() as $q)
+    <div class="p-3 border rounded-lg mb-3">
+        <div class="flex items-start justify-between">
+            <div>
+                <div class="text-sm text-gray-500">#{{ $q->order ?? 0 }} • {{ $q->points }} poin</div>
+                <div class="font-semibold">{{ $q->question_text }}</div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" class="text-blue-600 text-sm hover:underline"
+                    onclick='BUILDER_QUIZ["{{ $K }}"].open("{{ $existing->id }}", @json($q))'>
+                    Edit
+                </button>
+                <form action="{{ route('admin.quizzes.questions.destroy', [$existing->id, $q->id]) }}" method="POST"
+                    onsubmit="return confirm('Hapus pertanyaan ini?')">
+                    @csrf @method('DELETE')
+                    <button type="submit" class="text-red-600 text-sm hover:underline">Hapus</button>
+                </form>
+            </div>
+        </div>
+
+        <ul class="mt-2 ml-5 list-disc">
+            @foreach($q->options as $idx => $opt)
+            <li class="{{ $opt->is_correct ? 'text-green-700 font-semibold' : '' }}">
+                {{ chr(65 + $idx) }}. {{ $opt->option_text }}
+                @if($opt->is_correct)
+                <span class="ml-2 text-xs px-2 py-0.5 rounded bg-green-prd">benar</span>
+                @endif
+            </li>
+            @endforeach
+        </ul>
+    </div>
+    @empty
+    <div class="p-3 rounded bg-soft text-gray-600">Belum ada pertanyaan.</div>
+    @endforelse
+</div>
+</div>
 {{-- ===== MODAL (namespaced per kind) ===== --}}
 <div id="{{ $modalId }}" class="fixed inset-0 bg-black/40 hidden z-50 items-center justify-center">
     <div class="bg-white w-full max-w-2xl rounded-2xl p-6">
@@ -167,6 +168,7 @@ $optionsId = "qm-options-{$K}";
         </form>
     </div>
 </div>
+
 
 @push('scripts')
 <script>
