@@ -142,6 +142,12 @@ Route::prefix('admin')
 
         Route::post('courses/{course}/posttest/copy-from-pretest', [AdminQuizController::class, 'syncFromPretest'])
             ->name('courses.posttest.copyFromPretest');
+
+        Route::post(
+            'courses/{course}/quizzes/{kind}/import', // <--- SALAH
+            [AdminQuizController::class, 'importByKind']
+        )
+            ->name('courses.quizzes.import');
         // Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
         // Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
         // Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');

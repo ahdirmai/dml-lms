@@ -76,30 +76,93 @@ return; @endphp
 
 {{-- ===== Daftar Pertanyaan ===== --}}
 <div id="questions-{{ $K }}" class="p-4 border rounded-xl bg-white">
-    <div class="flex items-center justify-between mb-4">
+    {{-- Baris 1: Judul + Tambah --}}
+    <div class="flex items-center justify-between mb-3">
         <h4 class="text-lg font-semibold">Daftar Pertanyaan ({{ ucfirst($kind) }})</h4>
         <button type="button" class="bg-secondary-highlight text-white px-4 py-2 rounded-xl"
             onclick="BUILDER_QUIZ['{{ $K }}'].open('{{ $existing->id }}')">
             + Tambah Pertanyaan
         </button>
+    </div>
 
-        {{-- Tampilkan hanya untuk POSTTEST dan jika pretest + pertanyaannya ada --}}
+    {{-- Baris 2: Toolbar Import --}}
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+        @if(
+        $kind === \App\Models\Lms\Quiz::KIND_PRETEST)
+        <button id="btnImportPretest-{{ $K }}" type="button"
+            class="px-3 py-2 rounded bg-amber-500 text-white hover:bg-amber-600">
+            Import Excel (Pretest)
+        </button>
+        @else
+
+        <button id="btnImportPosttest-{{ $K }}" type="button"
+            class="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700">
+            Import Excel (Posttest)
+        </button>
+
+        @endif
+        <a href="{{ url('/storage/templates/quiz_import_template.xlsx') }}"
+            class="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700" download>
+            Download Template
+        </a>
+
+        {{-- Hanya tampil di POSTTEST: Copy dari Pretest --}}
         @if(
         $kind === \App\Models\Lms\Quiz::KIND_POSTTEST &&
         method_exists($course, 'pretest') && $course->pretest &&
         $course->pretest->questions()->exists()
         )
         <form method="POST" action="{{ route('admin.courses.posttest.copyFromPretest', $course->id) }}"
-            onsubmit="return confirm('Salin semua pertanyaan dari Pretest ke Posttest?');">
+            onsubmit="return confirm('Salin semua pertanyaan dari Pretest ke Posttest?');" class="ml-auto">
             @csrf
             <input type="hidden" name="course_id" value="{{ $course->id }}">
-            {{-- supaya setelah submit tetap kembali ke tab posttest --}}
             <input type="hidden" name="redirect_tab" value="posttest">
             <button type="submit" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-xl">
                 Copy dari Pretest
             </button>
         </form>
         @endif
+    </div>
+
+    {{-- ====== IMPORT MODAL (namespaced per kind) ====== --}}
+    <div id="importModal-{{ $K }}" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/40 p-4">
+        <div class="w-full max-w-lg rounded-2xl bg-white shadow-xl">
+            <div class="flex items-center justify-between border-b p-4">
+                <h3 class="text-lg font-semibold">
+                    Import Pertanyaan <span id="importKindBadge-{{ $K }}" class="uppercase"></span>
+                </h3>
+                <button type="button" class="p-2 rounded hover:bg-gray-100" data-close-modal>&times;</button>
+            </div>
+
+            <form id="formImport-{{ $K }}" class="p-4 space-y-4" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" id="importKind-{{ $K }}" name="kind" value="">
+                <div>
+                    <label class="block font-medium mb-1">File Excel (.xlsx/.xls/.csv)</label>
+                    <input type="file" name="file" id="importFile-{{ $K }}" accept=".xlsx,.xls,.csv" required
+                        class="w-full border rounded px-3 py-2">
+                </div>
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="replace_existing-{{ $K }}" name="replace_existing" value="1">
+                    <label for="replace_existing-{{ $K }}">Hapus & ganti semua pertanyaan lama</label>
+                </div>
+
+                <div class="flex items-center gap-3 pt-2">
+                    <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">
+                        Import
+                    </button>
+                    <button type="button" data-close-modal class="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300">
+                        Batal
+                    </button>
+                </div>
+
+                <p class="text-sm text-gray-600">
+                    Format: <code>question, options, correct, points, order</code><br>
+                    <b>options</b>: pakai <code>;</code><br>
+                    <b>correct</b>: pakai <code>;</code> jika lebih dari satu (multiple_choice).
+                </p>
+            </form>
+        </div>
     </div>
 
     @forelse($existing->questions()->with('options')->orderBy('order')->get() as $q)
@@ -320,6 +383,91 @@ return; @endphp
 
   // expose per kind
   window.BUILDER_QUIZ[K] = { open, close, addOption, removeOption, setCorrect };
+})();
+</script>
+
+<script>
+    (() => {
+    const K = "{{ $K }}";
+    const COURSE_ID = "{{ $course->id ?? ($courseId ?? '') }}";
+    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    const routeBase = (kind) => `{{ url('admin/courses') }}/${COURSE_ID}/quizzes/${kind}/import`;
+
+    // scoped elements
+    const modal      = document.getElementById(`importModal-${K}`);
+    const form       = document.getElementById(`formImport-${K}`);
+    const fileInput  = document.getElementById(`importFile-${K}`);
+    const kindInput  = document.getElementById(`importKind-${K}`);
+    const kindBadge  = document.getElementById(`importKindBadge-${K}`);
+    const btnPre     = document.getElementById(`btnImportPretest-${K}`);
+    const btnPost    = document.getElementById(`btnImportPosttest-${K}`);
+
+    const openModal = (kind) => {
+        if (!COURSE_ID) {
+            if (window.Swal) Swal.fire({icon:'error', title:'Course tidak ditemukan', text:'COURSE_ID kosong di view.'});
+            else alert('COURSE_ID kosong di view.');
+            return;
+        }
+        kindInput.value = kind;
+        kindBadge.textContent = `(${kind})`;
+        fileInput.value = '';
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+    const closeModal = () => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    };
+
+    btnPre?.addEventListener('click',  () => openModal('pretest'));
+    btnPost?.addEventListener('click', () => openModal('posttest'));
+    modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+    form?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const kind = kindInput.value || 'pretest';
+        const action = routeBase(kind);
+
+        const fd = new FormData(form);
+        try {
+            const res = await fetch(action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': token },
+                body: fd,
+                redirect: 'follow'
+            });
+
+            if (res.ok) {
+                closeModal();
+                if (window.Swal) {
+                    Swal.fire({icon:'success', title:'Berhasil', text:`Import ${kind} selesai.`})
+                        .then(
+                            () => location.reload()
+                        );
+                } else {
+                    alert('Import berhasil. Halaman akan dimuat ulang.');
+                    location.reload();
+                }
+            } else {
+                const text = await res.text();
+                closeModal();
+                if (window.Swal) {
+                    Swal.fire({icon:'error', title:'Gagal import', html: text.substring(0, 600)});
+                } else {
+                    alert('Gagal import: ' + text);
+                }
+            }
+        } catch (err) {
+            closeModal();
+            if (window.Swal) {
+                Swal.fire({icon:'error', title:'Error', text: (err?.message ?? 'Unknown error')});
+            } else {
+                alert('Error: ' + (err?.message ?? 'Unknown error'));
+            }
+        }
+    });
 })();
 </script>
 @endpush

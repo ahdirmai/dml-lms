@@ -24,7 +24,8 @@ class Course extends Model
         'posttest_passing_score',
         'require_pretest_before_content',
         'thumbnail_path',
-        'instructor_id'
+        'instructor_id',
+        'created_by'
     ];
 
     protected $casts = [
@@ -71,5 +72,10 @@ class Course extends Model
     public function posttest()
     {
         return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'posttest');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
 }

@@ -8,6 +8,7 @@ use App\Models\Lms\Course;
 use App\Models\Lms\Category;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -147,6 +148,7 @@ class CourseController extends Controller
                 'has_pretest'                     => $hasPre,
                 'has_posttest'                    => $hasPost,
                 'require_pretest_before_content'  => $reqBefore,
+                'created_by' => Auth::user()->id
             ]);
 
             if ($categoryId) {

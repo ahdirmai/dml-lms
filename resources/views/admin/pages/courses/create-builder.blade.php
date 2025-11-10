@@ -507,10 +507,16 @@ function setHeaderForLessonMode(){
   if (saveDraftBtn) saveDraftBtn.classList.add('hidden');
   if (publishBtn)   publishBtn.classList.add('hidden');
 }
+
 function setHeaderForSettingsMode(){
   if (saveDraftBtn) saveDraftBtn.classList.remove('hidden');
   if (publishBtn)   publishBtn.classList.remove('hidden');
 }
+
+// function setHeaderForSettingQuizsMode(){
+// if (saveDraftBtn) saveDraftBtn.classList.remove('hidden');
+// if (publishBtn) publishBtn.classList.remove('hidden');
+// }
 
 /* ===========================
  *  Sidebar: set active state
@@ -546,18 +552,21 @@ function showSettingsView(){
 function showLessonView(){
   hideAll(); contentLessonCreate?.classList.remove("hidden");
   setHeaderForLessonMode();
+
 }
 function showPretestView(){
   document.getElementById("editor-title").textContent = "Pengaturan Pretest";
   hideAll(); contentPretest?.classList.remove("hidden");
   setHeaderForSettingsMode();
   setActiveSidebar('nav-pretest');
+  setHeaderForLessonMode();
   markOnlyActiveLesson(null); // <— clear lesson active
 }
 function showPosttestView(){
   document.getElementById("editor-title").textContent = "Pengaturan Posttest";
   hideAll(); contentPosttest?.classList.remove("hidden");
   setHeaderForSettingsMode();
+  setHeaderForLessonMode();
   setActiveSidebar('nav-posttest');
   markOnlyActiveLesson(null); // <— clear lesson active
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\QuizQuestionsImport;
 use App\Models\Lms\Course;
 use App\Models\Lms\Lesson;
 use App\Models\Lms\Quiz;
@@ -12,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Excel;
 use Throwable;
 
 class QuizController extends Controller
@@ -36,7 +38,7 @@ class QuizController extends Controller
                 'id'      => (string) Str::uuid(),
                 'quiz_id' => $quiz->id,
                 'question_text'  => $data['prompt'],
-                'points'  => $data['points'] ?? 1,
+                'score'  => $data['points'] ?? 1,
                 'order'   => $data['order'] ?? ($quiz->questions()->max('order') + 1),
             ]);
 
@@ -48,6 +50,10 @@ class QuizController extends Controller
                     'is_correct'  => $idx === (int) $data['correct_index'],
                 ]);
             }
+
+            $quiz->update([
+                'total_questions' => $quiz->total_questions += 1
+            ]);
         });
         $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
         return redirect()
@@ -57,11 +63,7 @@ class QuizController extends Controller
 
     public function updateQuestion(Request $request, Quiz $quiz, QuizQuestion $question)
     {
-        // return [
-        //     $question->quiz_id === $quiz->id
-        // ];
         abort_unless($question->quiz_id === $quiz->id, 404);
-
         $data = $request->validate([
             'prompt'        => ['required', 'string', 'max:1000'],
             'points'        => ['nullable', 'integer', 'min:0', 'max:1000'],
@@ -75,7 +77,7 @@ class QuizController extends Controller
         DB::transaction(function () use ($question, $data) {
             $question->update([
                 'option_text' => $data['prompt'],
-                'points' => $data['points'] ?? 1,
+                'score' => $data['points'] ?? 1,
                 'order'  => $data['order'] ?? $question->order,
             ]);
 
@@ -125,6 +127,10 @@ class QuizController extends Controller
             $question->options()->delete();
             $question->delete();
         });
+
+        $quiz->update([
+            'total_questions' => $quiz->total_questions -= 1
+        ]);
         $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
 
         return redirect()
@@ -227,6 +233,17 @@ class QuizController extends Controller
                 ]));
             }
 
+            // update course setting set crouse passing grade (pretest postest)
+            if ($kind === 'pretest') {
+                # code...
+                $course->update([
+                    'default_passing_score' => $payload['passing_score'],
+                    'pretest_passing_score' => $payload['passing_score']
+                ]);
+            } else {
+                $course->update(['posttest_passing_score' => $payload['passing_score']]);
+            }
+
             DB::commit();
             $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
 
@@ -282,11 +299,74 @@ class QuizController extends Controller
                     ]);
                 }
             }
+            $posttest->total_questions = $pretest->total_questions;
+            $posttest->save();
         });
+
+        // return $posttest;
+
+
 
         // Jika ingin tetap di tab posttest, boleh tambahkan query ?tab=posttest
         return redirect()
             ->back()
             ->with('success', 'Posttest berhasil disinkronkan dari Pretest.');
+    }
+
+    public function importByKind(Request $request, Course $course, string $kind)
+    {
+        $data = $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv'],
+            'replace_existing' => ['nullable', 'boolean'],
+        ]);
+
+        $quiz = \App\Models\Lms\Quiz::query()
+            ->where('quizzable_type', \App\Models\Lms\Course::class)
+            ->where('quizzable_id', $course->id)
+            ->where('quiz_kind', $kind)
+            ->first();
+
+        if (!$quiz) {
+            return back()->with('error', "Quiz {$kind} belum dibuat untuk kursus ini.");
+        }
+
+        $replace = (bool)($data['replace_existing'] ?? false);
+        $import = new \App\Imports\QuizQuestionsImport($quiz, $replace);
+
+        try {
+            // return 'x';
+            Excel::import($import, $data['file']);
+        } catch (\Throwable $e) {
+            // Error global (misal file corrupt)
+            return $e->getMessage();
+
+            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+        }
+
+        // Kumpulkan semua error & failure agar ditampilkan
+        $messages = [];
+
+        // 1) Failure validasi per baris (dari SkipsFailures)
+        foreach ($import->failures() as $failure) {
+            // $failure->row(), $failure->attribute(), $failure->errors()
+            $attr = $failure->attribute(); // nama kolom
+            $row  = $failure->row();       // nomor baris (termasuk header)
+            foreach ($failure->errors() as $err) {
+                $messages[] = "Row {$row} [{$attr}]: {$err}";
+            }
+        }
+
+        // 2) Error runtime/exception lain (ditangkap manual)
+        foreach ($import->getCaughtErrors() as $msg) {
+            $messages[] = $msg;
+        }
+
+        if (!empty($messages)) {
+            // Tampilkan daftar error ke user
+            return back()->with('error', "Beberapa baris gagal diimport:")
+                ->with('import_errors', $messages);
+        }
+
+        return back()->with('success', "Berhasil import pertanyaan untuk {$kind}.");
     }
 }
