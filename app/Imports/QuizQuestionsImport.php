@@ -87,6 +87,12 @@ class QuizQuestionsImport implements
                     $this->insertedQuestions++;
 
                     // QuizOption::create([
+                    //     'id'          => (string) Str::uuid(), // <-- TAMBAHKAN BARIS INI
+                    //     'question_id' => $q->id,
+                    //     'option_text' => 'xxx',
+                    //     'is_correct'  => false,
+                    // ]);
+                    // QuizOption::create([
                     //     'question_id' => $q->id,
                     //     'option_text' => 'sdas',
                     //     'is_correct'  => false,
@@ -125,10 +131,11 @@ class QuizQuestionsImport implements
                         }
 
                         QuizOption::create([
+                            'id'          => (string) Str::uuid(), // <-- TAMBAHKAN BARIS INI
                             'question_id' => $q->id,
                             'option_text' => $opt,
                             'is_correct'  => $isCorrect,
-                            'order_no'    => $i++,   // ← WAJIB pakai order_no
+                            'order'    => $i++,
                         ]);
                         $this->insertedOptions++;
                     }

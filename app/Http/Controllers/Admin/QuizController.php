@@ -14,6 +14,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Excel;
+use Maatwebsite\Excel\Facades\Excel as FacadesExcel;
 use Throwable;
 
 class QuizController extends Controller
@@ -335,11 +336,9 @@ class QuizController extends Controller
 
         try {
             // return 'x';
-            Excel::import($import, $data['file']);
+            FacadesExcel::import($import, $data['file']);
         } catch (\Throwable $e) {
             // Error global (misal file corrupt)
-            return $e->getMessage();
-
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
         }
 
@@ -366,7 +365,6 @@ class QuizController extends Controller
             return back()->with('error', "Beberapa baris gagal diimport:")
                 ->with('import_errors', $messages);
         }
-
         return back()->with('success', "Berhasil import pertanyaan untuk {$kind}.");
     }
 }

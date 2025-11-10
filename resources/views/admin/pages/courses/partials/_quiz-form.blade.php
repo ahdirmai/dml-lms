@@ -16,6 +16,22 @@ $optionsId = "qm-options-{$K}";
 @endphp
 
 <div class="space-y-6">
+    {{-- @if (session('success'))
+    <div class="mb-4 p-3 rounded bg-green-100 text-green-800">{{ session('success') }}</div>
+    @endif
+
+    @if (session('error'))
+    <div class="mb-4 p-3 rounded bg-red-100 text-red-800">
+        <p class="font-semibold">{{ session('error') }}</p>
+        @if (session('import_errors'))
+        <ul class="list-disc list-inside mt-2">
+            @foreach (session('import_errors') as $line)
+            <li>{{ $line }}</li>
+            @endforeach
+        </ul>
+        @endif
+    </div>
+    @endif --}}
     {{-- ===== Header Quiz ===== --}}
     <form action="{{ $store_route }}" method="POST" class="p-4 border rounded-xl bg-white">
         @csrf
@@ -134,7 +150,7 @@ return; @endphp
                 <button type="button" class="p-2 rounded hover:bg-gray-100" data-close-modal>&times;</button>
             </div>
 
-            <form id="formImport-{{ $K }}" class="p-4 space-y-4" enctype="multipart/form-data">
+            <form id="formImport-{{ $K }}" class="p-4 space-y-4" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" id="importKind-{{ $K }}" name="kind" value="">
                 <div>
@@ -388,86 +404,47 @@ return; @endphp
 
 <script>
     (() => {
-    const K = "{{ $K }}";
-    const COURSE_ID = "{{ $course->id ?? ($courseId ?? '') }}";
-    const token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  const K          = "{{ $K }}";
+  const COURSE_ID  = "{{ $course->id ?? ($courseId ?? '') }}";
 
-    const routeBase = (kind) => `{{ url('admin/courses') }}/${COURSE_ID}/quizzes/${kind}/import`;
+  const routeBase  = (kind) => `{{ url('admin/courses') }}/${COURSE_ID}/quizzes/${kind}/import`;
 
-    // scoped elements
-    const modal      = document.getElementById(`importModal-${K}`);
-    const form       = document.getElementById(`formImport-${K}`);
-    const fileInput  = document.getElementById(`importFile-${K}`);
-    const kindInput  = document.getElementById(`importKind-${K}`);
-    const kindBadge  = document.getElementById(`importKindBadge-${K}`);
-    const btnPre     = document.getElementById(`btnImportPretest-${K}`);
-    const btnPost    = document.getElementById(`btnImportPosttest-${K}`);
+  const modal      = document.getElementById(`importModal-${K}`);
+  const form       = document.getElementById(`formImport-${K}`);
+  const fileInput  = document.getElementById(`importFile-${K}`);
+  const kindInput  = document.getElementById(`importKind-${K}`);
+  const kindBadge  = document.getElementById(`importKindBadge-${K}`);
+  const btnPre     = document.getElementById(`btnImportPretest-${K}`);
+  const btnPost    = document.getElementById(`btnImportPosttest-${K}`);
 
-    const openModal = (kind) => {
-        if (!COURSE_ID) {
-            if (window.Swal) Swal.fire({icon:'error', title:'Course tidak ditemukan', text:'COURSE_ID kosong di view.'});
-            else alert('COURSE_ID kosong di view.');
-            return;
-        }
-        kindInput.value = kind;
-        kindBadge.textContent = `(${kind})`;
-        fileInput.value = '';
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-    };
-    const closeModal = () => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    };
+  const openModal = (kind) => {
+    if (!COURSE_ID) { alert('COURSE_ID kosong di view.'); return; }
+    kindInput.value = kind;
+    kindBadge.textContent = `(${kind})`;
+    fileInput.value = '';
 
-    btnPre?.addEventListener('click',  () => openModal('pretest'));
-    btnPost?.addEventListener('click', () => openModal('posttest'));
-    modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+    // set action form ke route yang benar
+    form.setAttribute('action', routeBase(kind));
 
-    form?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const kind = kindInput.value || 'pretest';
-        const action = routeBase(kind);
+    // tampilkan modal
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  };
 
-        const fd = new FormData(form);
-        try {
-            const res = await fetch(action, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': token },
-                body: fd,
-                redirect: 'follow'
-            });
+  const closeModal = () => {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  };
 
-            if (res.ok) {
-                closeModal();
-                if (window.Swal) {
-                    Swal.fire({icon:'success', title:'Berhasil', text:`Import ${kind} selesai.`})
-                        .then(
-                            () => location.reload()
-                        );
-                } else {
-                    alert('Import berhasil. Halaman akan dimuat ulang.');
-                    location.reload();
-                }
-            } else {
-                const text = await res.text();
-                closeModal();
-                if (window.Swal) {
-                    Swal.fire({icon:'error', title:'Gagal import', html: text.substring(0, 600)});
-                } else {
-                    alert('Gagal import: ' + text);
-                }
-            }
-        } catch (err) {
-            closeModal();
-            if (window.Swal) {
-                Swal.fire({icon:'error', title:'Error', text: (err?.message ?? 'Unknown error')});
-            } else {
-                alert('Error: ' + (err?.message ?? 'Unknown error'));
-            }
-        }
-    });
+  // tombol buka modal
+  btnPre?.addEventListener('click',  () => openModal('pretest'));
+  btnPost?.addEventListener('click', () => openModal('posttest'));
+
+  // tombol close
+  modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+  // submit form = default browser submit (non-AJAX). Tidak ada JS tambahan di sini.
 })();
 </script>
 @endpush
