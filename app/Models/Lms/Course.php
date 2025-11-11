@@ -25,7 +25,8 @@ class Course extends Model
         'require_pretest_before_content',
         'thumbnail_path',
         'instructor_id',
-        'created_by'
+        'created_by',
+        'using_due_date'
     ];
 
     protected $casts = [
@@ -72,6 +73,11 @@ class Course extends Model
     public function posttest()
     {
         return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'posttest');
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'course_id', 'id');
     }
 
     public function createdBy()

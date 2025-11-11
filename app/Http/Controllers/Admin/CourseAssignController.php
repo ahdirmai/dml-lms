@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Lms\Course;
 use App\Models\User;
 use App\Models\Lms\Enrollment as LmsEnrollment;
+use App\Models\Lms\EnrollmentDueDate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Throwable;
 
 class CourseAssignController extends Controller
@@ -47,32 +49,56 @@ class CourseAssignController extends Controller
 
     public function store(Request $request, Course $course)
     {
+        // 2. Ambil status 'using_due_date' SEBELUM validasi
+        $isDueDateCourse = $course->using_due_date;
+
+        // 3. Tambahkan validasi kondisional
         $data = $request->validate([
             'user_ids'   => ['required', 'array', 'min:1'],
             'user_ids.*' => ['integer', 'exists:users,id'],
+
+            'due_dates' => [
+                Rule::requiredIf(function () use ($course) {
+                    return $course->using_due_date;
+                }), // Wajib ada jika $isDueDateCourse true
+                'nullable',
+                'array'
+            ],
+            'due_dates.*.start_date' => [
+                Rule::requiredIf(function () use ($course) {
+                    return $course->using_due_date;
+                }), // Wajib ada jika $isDueDateCourse true
+                'nullable',
+                'date'
+            ],
+            'due_dates.*.end_date' => [
+                Rule::requiredIf(function () use ($course) {
+                    return $course->using_due_date;
+                }), // Wajib ada jika $isDueDateCourse true
+                'nullable',
+                'date',
+                'after_or_equal:due_dates.*.start_date'
+            ],
         ], [
             'user_ids.required' => 'Pilih minimal satu karyawan.',
+            // 4. Tambahkan pesan error kustom
+            'due_dates.required' => 'Pengaturan tanggal (due dates) wajib diisi untuk kursus ini.',
+            'due_dates.*.start_date.required' => 'Start date wajib diisi untuk semua karyawan terpilih.',
+            'due_dates.*.end_date.required' => 'End date wajib diisi untuk semua karyawan terpilih.',
+            'due_dates.*.end_date.after_or_equal' => 'End date harus setelah atau sama dengan start date.'
         ]);
 
         try {
             DB::beginTransaction();
 
-            // Kunci course agar konsisten (mencegah delete/archive saat assign)
             $fresh = Course::query()
                 ->whereKey($course->id)
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            // (Opsional) Batasi assign jika course dalam status tertentu
-            // if ($fresh->status !== Course::STATUS_PUBLISHED) {
-            //     DB::rollBack();
-            //     return back()->with('error', 'Course belum dipublikasikan.');
-            // }
-
             $now  = now();
             $uids = collect($data['user_ids'])->unique()->values();
 
-            // Validasi defensif: pastikan user masih ada (belum soft-deleted) & belum enrolled
             $validUserIds = User::query()
                 ->whereIn('id', $uids)
                 ->pluck('id')
@@ -83,46 +109,39 @@ class CourseAssignController extends Controller
                 return back()->with('error', 'Tidak ada pengguna valid untuk di-assign.');
             }
 
-            // Siapkan rows untuk upsert (unik: user_id + course_id)
-            $rows = collect($validUserIds)->map(fn($uid) => [
-                'user_id'     => $uid,
-                'course_id'   => $fresh->id,
-                'status'      => 'assigned',
-                'enrolled_at' => $now,
-                'created_at'  => $now,
-                'updated_at'  => $now,
-            ])->all();
+            foreach ($validUserIds as $uid) {
+                $enrollment = LmsEnrollment::updateOrCreate(
+                    [
+                        'user_id'   => $uid,
+                        'course_id' => $fresh->id,
+                    ],
+                    [
+                        'status'      => 'assigned',
+                        'enrolled_at' => $now,
+                        'updated_at'  => $now,
+                    ]
+                );
 
-            // Gunakan upsert agar idempotent (tidak error jika sudah ada)
-            // Kolom unik: ['user_id','course_id'] — sesuaikan dengan index unik di tabel enrollments
-            LmsEnrollment::upsert(
-                $rows,
-                ['user_id', 'course_id'],
-                ['status', 'enrolled_at', 'updated_at']
-            );
+                // Cek data due_dates spesifik untuk user ini
+                if ($fresh->using_due_date && isset($data['due_dates'][$uid])) {
+                    $dates = $data['due_dates'][$uid];
 
-            // (Opsional) Ambil siapa saja yang BARU diassign untuk notifikasi
-            $existingPairs = LmsEnrollment::query()
-                ->where('course_id', $fresh->id)
-                ->whereIn('user_id', $validUserIds)
-                ->pluck('user_id')
-                ->all();
-
-            $newlyAssignedUserIds = array_values(array_diff($validUserIds, $existingPairs));
+                    // Validasi server-side sudah memastikan $dates['start_date'] dan $dates['end_date'] ada
+                    EnrollmentDueDate::updateOrCreate(
+                        ['enrollment_id' => $enrollment->id],
+                        [
+                            'start_date' => $dates['start_date'],
+                            'end_date'   => $dates['end_date'],
+                        ]
+                    );
+                }
+            }
 
             DB::commit();
-
-            // Kirim notifikasi/email setelah commit (agar tidak kirim jika DB gagal)
-            // DB::afterCommit(function () use ($fresh, $newlyAssignedUserIds) {
-            //     // Dispatch Job/Notification di sini
-            //     // e.g., NotifyAssignedToCourse::dispatch($fresh->id, $newlyAssignedUserIds);
-            // });
 
             return back()->with('success', 'Karyawan berhasil di-assign ke kursus.');
         } catch (Throwable $e) {
             DB::rollBack();
-
-            // Log::error('Gagal assign course', ['course_id' => $course->id, 'error' => $e->getMessage()]);
             return back()
                 ->withInput()
                 ->with('error', 'Terjadi kesalahan saat assign: ' . $e->getMessage());

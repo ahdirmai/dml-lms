@@ -322,6 +322,25 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                         </label>
                     </div>
                 </div>
+                <div class="grid grid-cols-1 gap-6">
+                    <div class="flex items-center justify-between p-4 rounded-xl border bg-white">
+                        <div>
+                            <p class="font-semibold text-gray-800">Aktifkan Due Date</p>
+                            <p class="text-sm text-gray-500">Jika aktif, kursus memiliki Due Date.</p>
+                        </div>
+                        @php $preOn = old('using_due_date', isset($course) ? (int)($course->using_due_date ?? 0) : 0);
+                        @endphp
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="using_due_date" id="using_due_date" class="sr-only peer"
+                                value="1" @checked($preOn)>
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition">
+                            </div>
+                            <span class="ml-3 text-sm font-medium text-gray-700"><span id="label_using_due_date">{{
+                                    $preOn
+                                    ? 'ON' : 'OFF' }}</span></span>
+                        </label>
+                    </div>
+                </div>
 
                 <div class="p-4 rounded-xl border bg-white">
                     @php $requireBefore = old('require_pretest_before_content', isset($course) ?

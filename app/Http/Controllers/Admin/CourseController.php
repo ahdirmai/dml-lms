@@ -131,6 +131,7 @@ class CourseController extends Controller
             // --- NEW: flags pre/post & requirement dari checkbox ---
             $hasPre   = $request->boolean('has_pretest');
             $hasPost  = $request->boolean('has_posttest');
+            $hasDueDate  = $request->boolean('using_due_date');
             $reqBefore = $request->boolean('require_pretest_before_content');
 
             $course = Course::create([
@@ -148,7 +149,8 @@ class CourseController extends Controller
                 'has_pretest'                     => $hasPre,
                 'has_posttest'                    => $hasPost,
                 'require_pretest_before_content'  => $reqBefore,
-                'created_by' => Auth::user()->id
+                'created_by' => Auth::user()->id,
+                'using_due_date' => $hasDueDate
             ]);
 
             if ($categoryId) {
@@ -205,6 +207,8 @@ class CourseController extends Controller
             $hasPre   = $request->boolean('has_pretest');
             $hasPost  = $request->boolean('has_posttest');
             $reqBefore = $request->boolean('require_pretest_before_content');
+            $hasDueDate  = $request->boolean('using_due_date');
+
 
             // Jika pretest dimatikan, requirement wajib pretest juga harus padam
             if (!$hasPre && $reqBefore) {
@@ -225,6 +229,8 @@ class CourseController extends Controller
                 'has_pretest'                    => $hasPre,
                 'has_posttest'                   => $hasPost,
                 'require_pretest_before_content' => $reqBefore,
+                'using_due_date' => $hasDueDate
+
             ])->save();
 
             // === Sinkron kategori ===

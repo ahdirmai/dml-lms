@@ -23,4 +23,8 @@ class Enrollment extends Model
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
+    public function EnrollmentDueDate()
+    {
+        return $this->hadOne(EnrollmentDueDate::class, 'enrollment_id');
+    }
 }
