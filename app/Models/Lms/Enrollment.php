@@ -27,4 +27,8 @@ class Enrollment extends Model
     {
         return $this->hadOne(EnrollmentDueDate::class, 'enrollment_id');
     }
+    public function lessonProgress()
+    {
+        return $this->hasMany(LessonProgress::class, 'enrollment_id');
+    }
 }

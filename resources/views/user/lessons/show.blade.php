@@ -30,10 +30,73 @@
         opacity: 0;
         transition: transform .2s ease, opacity .2s ease;
     }
+
+    /* Fallback overlay styling */
+    .yt-fallback {
+        position: absolute;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.55);
+        color: #fff;
+        text-align: center;
+        padding: 1rem;
+    }
+
+    .yt-fallback img {
+        max-width: 240px;
+        border-radius: 8px;
+        display: block;
+        margin: 0 auto 0.75rem;
+    }
 </style>
 @endpush
 
 @section('content')
+@php
+/**
+* SERVER-SIDE PREPARATION
+* - Buat src URL secara aman (hindari directive Blade di atribut)
+* - Periksa YouTube oEmbed (200 => kemungkinan embed diperbolehkan)
+* - Siapkan fallback thumbnail & watch URL
+*
+* Catatan: pemanggilan curl ini akan berjalan saat view dirender.
+* Untuk produksi, pertimbangkan caching hasil oEmbed per video ID.
+*/
+
+$ytId = $lesson->youtube_video_id ?? null;
+$gdriveId = $lesson->gdrive_file_id ?? null;
+
+$youtubeWatchUrl = $ytId ? "https://www.youtube.com/watch?v={$ytId}" : null;
+$youtubeThumb = $ytId ? "https://i.ytimg.com/vi/{$ytId}/hqdefault.jpg" : null;
+
+$youtubeEmbedAllowed = false;
+$youtubeEmbedSrc = null;
+
+if ($ytId) {
+// Build embed src with optional start time
+$youtubeEmbedSrc = 'https://www.youtube.com/embed/' . $ytId . '?rel=0';
+if (!empty($lesson->start_time_seconds)) {
+$youtubeEmbedSrc .= '&start=' . ((int) $lesson->start_time_seconds);
+}
+
+// oEmbed check (simple curl)
+$oembedUrl = 'https://www.youtube.com/oembed?url=' . urlencode($youtubeWatchUrl) . '&format=json';
+$ch = curl_init($oembedUrl);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_TIMEOUT, 4);
+// don't download body fully if not needed; still execute to get HTTP code
+curl_exec($ch);
+$httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+$youtubeEmbedAllowed = ($httpCode === 200);
+}
+
+$gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '/preview' : null;
+@endphp
+
 <div class="max-w-[1500px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
 
     {{-- Top bar --}}
@@ -48,15 +111,19 @@
             @endif
         </div>
 
-        <div class="flex items-center gap-2 sm:gap-3">
-            <a href="{{ route('user.courses.show', $course->id ?? ($lesson->course_id ?? '')) }}"
-                class="hidden sm:inline-flex items-center px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800">
+        <div class="flex items-center gap-2">
+            <button id="btn-open-sidebar"
+                class="lg:hidden inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span class="text-sm">Materi</span>
+            </button>
+
+            <a href="{{ route('user.courses.show', $course->id) }}"
+                class="hidden sm:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-primary-accent text-white font-semibold hover:brightness-95">
                 Kembali ke Kursus
             </a>
-            <button id="btn-open-sidebar"
-                class="inline-flex sm:hidden items-center px-3 py-2 rounded-xl text-xs font-semibold bg-primary-accent text-white hover:brightness-95">
-                Materi
-            </button>
         </div>
     </div>
 
@@ -64,24 +131,22 @@
     <nav class="text-[11px] sm:text-sm text-gray-500 mb-4">
         <a href="{{ route('user.dashboard') }}" class="hover:underline">Dashboard</a>
         <span class="mx-1 sm:mx-2">/</span>
-        <a href="{{ route('user.courses.show', $course->id ?? ($lesson->course_id ?? '')) }}" class="hover:underline">
-            {{ $course->title ?? 'Detail Kursus' }}
-        </a>
+        <a href="{{ route('user.courses.show', $course->id) }}" class="hover:underline">{{ $course->title ?? 'Detail
+            Kursus' }}</a>
         <span class="mx-1 sm:mx-2">/</span>
         <span class="font-semibold text-gray-700">{{ $lesson->title ?? 'Pelajaran' }}</span>
     </nav>
 
-    {{-- Grid: sidebar (desktop) + konten --}}
     <div class="grid grid-cols-1 lg:grid-cols-[22rem,1fr] gap-4 sm:gap-5">
 
-        {{-- DESKTOP SIDEBAR (muncul ≥1024px) --}}
+        {{-- Desktop sidebar --}}
         <aside class="hidden lg:block">
             <div class="sticky top-4">
                 <div
                     class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
                     <div class="flex items-center justify-between">
                         <h2 class="text-lg font-bold text-gray-800">Materi</h2>
-                        <a href="{{ route('user.courses.show', $course->id ?? ($lesson->course_id ?? '')) }}"
+                        <a href="{{ route('user.courses.show', $course->id) }}"
                             class="text-xs text-primary-accent hover:underline">Kembali</a>
                     </div>
                     <div class="mt-4 space-y-4">
@@ -95,7 +160,7 @@
                                 @php
                                 $isActive = ($lesson->id ?? null) === ($ls['id'] ?? null);
                                 $isDone = $ls['is_done'] ?? false;
-                                $type = $ls['type'] ?? 'video';
+                                $type = $ls['kind'] ?? 'youtube';
                                 @endphp
                                 <li>
                                     <a href="{{ route('user.lessons.show', $ls['id']) }}"
@@ -128,19 +193,24 @@
             </div>
         </aside>
 
-        {{-- OFFCANVAS (mobile & tablet) --}}
+        {{-- Offcanvas mobile --}}
         <div id="offcanvas-backdrop" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
         <aside id="offcanvas"
             class="fixed z-50 inset-y-0 left-0 w-[85%] max-w-[22rem] bg-white shadow-xl border-r border-gray-100 p-4 offcanvas-enter hidden">
-            <div class="flex items-center justify-between">
-                <h2 class="text-lg font-bold text-gray-800">Materi</h2>
-                <button id="btn-close-sidebar" class="text-gray-600 hover:text-gray-800 px-2 py-1 rounded">
-                    Tutup
+            <div class="flex items-center justify-between mb-3">
+                <h3 class="text-lg font-bold">Materi</h3>
+                <button id="btn-close-sidebar"
+                    class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-gray-100 hover:bg-gray-200">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
-            <div class="mt-4 h-[calc(100vh-5.5rem)] overflow-y-auto">
+
+            <div class="space-y-4 overflow-y-auto max-h-[calc(100vh-5rem)]">
                 @forelse(($modules ?? []) as $mod)
-                <div class="rounded-xl border border-gray-100 overflow-hidden mb-3">
+                <div class="rounded-xl border border-gray-100 overflow-hidden">
                     <div class="bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
                         {{ $mod['title'] ?? 'Modul' }}
                     </div>
@@ -149,7 +219,7 @@
                         @php
                         $isActive = ($lesson->id ?? null) === ($ls['id'] ?? null);
                         $isDone = $ls['is_done'] ?? false;
-                        $type = $ls['type'] ?? 'video';
+                        $type = $ls['kind'] ?? 'youtube';
                         @endphp
                         <li>
                             <a href="{{ route('user.lessons.show', $ls['id']) }}"
@@ -178,64 +248,72 @@
                 <div class="text-sm text-gray-500">Belum ada modul.</div>
                 @endforelse
             </div>
-            <a href="{{ route('user.courses.show', $course->id ?? ($lesson->course_id ?? '')) }}"
-                class="mt-3 inline-flex items-center justify-center w-full px-4 py-2 rounded-xl text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-800">
-                Kembali ke Kursus
-            </a>
         </aside>
 
-        {{-- KONTEN --}}
+        {{-- Main content --}}
         <main class="space-y-5">
-            @php
-            $c = $content ?? [];
-            $type = $c['type'] ?? ($lesson->type ?? 'video');
-            @endphp
 
-            @if($type === 'video')
+            {{-- Video / Text / Quiz handling --}}
+            @if($lesson->kind === 'youtube' || $lesson->kind === 'gdrive')
             <article class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 overflow-hidden">
-                <div class="bg-black/80 aspect-video">
-                    <video class="w-full h-full" controls preload="metadata" @if(!empty($c['video']['poster']))
-                        poster="{{ $c['video']['poster'] }}" @endif>
-                        @if(!empty($c['video']['src']))
-                        <source src="{{ $c['video']['src'] }}" type="video/mp4">
-                        @endif
-                        Browser Anda tidak mendukung video HTML5.
-                    </video>
+                <div class="relative bg-black/80 aspect-video">
+                    {{-- YouTube preferensi pertama (jika ada) --}}
+                    @if($ytId)
+                    @if($youtubeEmbedAllowed && !empty($youtubeEmbedSrc))
+                    <iframe id="lesson-iframe" class="w-full h-full" src="{{ $youtubeEmbedSrc }}"
+                        title="YouTube video player" frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen>
+                    </iframe>
+                    @else
+                    {{-- Tampilkan fallback langsung (embed diblokir atau oEmbed gagal) --}}
+                    <a href="{{ $youtubeWatchUrl }}" target="_blank" rel="noopener noreferrer"
+                        class="yt-fallback inline-flex flex-col items-center justify-center">
+                        <img src="{{ $youtubeThumb }}" alt="Thumbnail">
+                        <div class="inline-flex items-center gap-2 px-4 py-2 bg-primary-accent rounded-xl">Buka di
+                            YouTube</div>
+                        <p class="mt-2 text-sm text-white/90">Embedding terblokir — buka di YouTube</p>
+                    </a>
+                    @endif
+
+                    {{-- Kalau tidak ada YouTube tapi ada Google Drive --}}
+                    @elseif($gdriveId)
+                    {{-- Google Drive preview --}}
+                    <iframe id="lesson-iframe" class="w-full h-full" src="{{ $gdriveEmbedSrc }}"
+                        allow="autoplay"></iframe>
+
+                    @else
+                    <div class="w-full h-full flex items-center justify-center text-gray-400">
+                        Video tidak tersedia.
+                    </div>
+                    @endif
                 </div>
+
                 <div class="p-5">
-                    @if(!empty($c['body']))
-                    <p class="text-gray-700 leading-relaxed">{{ $c['body'] }}</p>
+                    @if(!empty($lesson->description))
+                    <p class="text-gray-700 leading-relaxed">{{ $lesson->description }}</p>
                     @endif
                     <div class="mt-4 flex gap-2">
-                        <a href="#"
-                            class="px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm font-semibold text-gray-800">Resource</a>
-                        <a href="#"
-                            class="px-3 py-2 rounded-xl bg-primary-accent hover:brightness-95 text-sm font-semibold text-white">Unduh
-                            Materi</a>
+                        {{-- space for resources --}}
                     </div>
                 </div>
             </article>
-            @elseif($type === 'text')
+
+            @elseif($lesson->kind === 'text')
             <article class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-6">
                 <div class="prose prose-slate max-w-none">
-                    @if(!empty($c['body']['lead']))
-                    <p><strong>Ringkasan:</strong> {{ $c['body']['lead'] }}</p>
+                    @if(!empty($lesson->description))
+                    <p class="lead"><strong>Ringkasan:</strong> {{ $lesson->description }}</p>
                     @endif
-                    @if(!empty($c['body']['html'])) {!! $c['body']['html'] !!} @endif
-                    @if(!empty($c['body']['code']))
-                    <pre
-                        class="overflow-auto p-4 rounded-xl bg-gray-50 text-sm"><code>{{ $c['body']['code'] }}</code></pre>
-                    @endif
-                    @if(!empty($c['body']['tips']))
-                    <div class="p-4 rounded-xl bg-green-50 border border-green-200">
-                        <p class="m-0 text-sm"><strong>Tips:</strong> {{ $c['body']['tips'] }}</p>
-                    </div>
+
+                    @if(!empty($lesson->content))
+                    {!! $lesson->content !!}
+                    @else
+                    <p>Konten pelajaran ini belum tersedia.</p>
                     @endif
                 </div>
 
                 <div class="mt-5 flex flex-wrap gap-2">
-                    <a href="#"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold">Resource</a>
                     <form action="#" method="post">@csrf
                         <button type="submit"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-secondary-highlight hover:brightness-95 text-white font-semibold">
@@ -244,7 +322,8 @@
                     </form>
                 </div>
             </article>
-            @elseif($type === 'quiz')
+
+            @elseif($lesson->kind === 'quiz')
             <article class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-6">
                 <header class="mb-2">
                     <h2 class="text-xl font-extrabold text-gray-900">Kuis</h2>
@@ -254,49 +333,55 @@
                 </header>
 
                 <form action="#" method="post" class="space-y-6">@csrf
-                    @forelse(($c['questions'] ?? []) as $idx => $q)
+                    @if($lesson->quiz)
+                    @forelse($lesson->quiz->questions as $idx => $question)
                     <fieldset class="border border-gray-100 rounded-xl p-4">
-                        <legend class="px-2 text-sm font-semibold text-gray-700">{{ $idx + 1 }}) {{ $q['q'] ?? '' }}
-                        </legend>
+                        <legend class="px-2 text-sm font-semibold text-gray-700">{{ $idx + 1 }}) {{
+                            $question->question_text ?? 'Pertanyaan' }}</legend>
                         <div class="mt-3 space-y-2">
-                            @foreach(($q['choices'] ?? []) as $cidx => $choice)
+                            @foreach($question->choices as $cidx => $choice)
                             @php $inputId = "q{$idx}c{$cidx}"; @endphp
                             <div>
-                                <input id="{{ $inputId }}" name="q{{ $idx }}" type="radio" class="peer hidden" />
+                                <input id="{{ $inputId }}" name="q{{ $idx }}" value="{{ $choice->id }}" type="radio"
+                                    class="peer hidden" />
                                 <label for="{{ $inputId }}"
                                     class="flex items-start gap-2 p-3 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-50">
-                                    <span>{{ $choice['label'] ?? '' }}</span>
+                                    <span>{{ $choice->text ?? 'Pilihan' }}</span>
                                 </label>
                             </div>
                             @endforeach
                         </div>
                     </fieldset>
                     @empty
-                    <p class="text-gray-500">Belum ada pertanyaan.</p>
+                    <p class="text-gray-500">Belum ada pertanyaan untuk kuis ini.</p>
                     @endforelse
+                    @else
+                    <p class="text-gray-500">Data kuis tidak ditemukan.</p>
+                    @endif
 
                     <div class="flex flex-wrap gap-2">
                         <button type="submit"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-accent hover:brightness-95 text-white font-semibold">
                             Kumpulkan Jawaban
                         </button>
-                        <a href="{{ route('user.lessons.show', $lesson->id) }}"
-                            class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold">
-                            Reset Pilihan
-                        </a>
                     </div>
                 </form>
             </article>
+
             @else
             <div class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-6">
-                <p class="text-gray-600">Tipe konten tidak dikenali.</p>
+                <p class="text-gray-600">Tipe konten ({{ $lesson->kind }}) tidak dikenali.</p>
             </div>
             @endif
 
             {{-- Prev / Next --}}
             @php
             $flat = [];
-            foreach(($modules ?? []) as $m){ foreach(($m['lessons'] ?? []) as $ls){ $flat[] = $ls; } }
+            foreach(($modules ?? []) as $m){
+            foreach(($m['lessons'] ?? []) as $ls){
+            $flat[] = $ls;
+            }
+            }
             $currIndex = collect($flat)->search(fn($l) => ($l['id'] ?? null) === ($lesson->id ?? null));
             $prev = $currIndex !== false && $currIndex > 0 ? $flat[$currIndex-1] : null;
             $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1] : null; @endphp <div
@@ -321,6 +406,7 @@
                 </a>
                 @endif
     </div>
+
     </main>
 </div>
 </div>
@@ -328,6 +414,7 @@
 
 @push('scripts')
 <script>
+    // Sidebar offcanvas controls
     const oc  = document.getElementById('offcanvas');
     const bg  = document.getElementById('offcanvas-backdrop');
     const btnOpen  = document.getElementById('btn-open-sidebar');
@@ -358,5 +445,32 @@
     btnClose && btnClose.addEventListener('click', closeSidebar);
     bg && bg.addEventListener('click', closeSidebar);
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSidebar(); });
+
+    // Heuristic fallback: jika iframe gagal load (embedding diblokir by CSP/age/region),
+    // kita tampilkan fallback setelah timeout singkat. Ini bukan 100% akurat
+    // karena cross-origin, tetapi memperbaiki UX ketika embed blocked.
+    (function(){
+        const iframe = document.getElementById('lesson-iframe');
+        if(!iframe) return;
+        // fallback element is the first .yt-fallback inside same container (if any)
+        const container = iframe.closest('.relative') || iframe.parentElement;
+        const fallback = container ? container.querySelector('.yt-fallback') : null;
+        if(!fallback) return;
+
+        // Wait for load event; if not fired quickly, show fallback
+        const t = setTimeout(()=> {
+            // Show fallback UI, hide iframe
+            fallback.style.display = 'flex';
+            iframe.style.display = 'none';
+        }, 3000);
+
+        iframe.addEventListener('load', ()=> {
+            clearTimeout(t);
+            // keep iframe visible
+        });
+
+        // If user clicks fallback, open in new tab (link already present in markup)
+        // Nothing more to do here.
+    })();
 </script>
 @endpush
