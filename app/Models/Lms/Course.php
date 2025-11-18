@@ -26,7 +26,8 @@ class Course extends Model
         'thumbnail_path',
         'instructor_id',
         'created_by',
-        'using_due_date'
+        'using_due_date',
+        'learning_objectives', // TAMBAHAN
     ];
 
     protected $casts = [
@@ -36,21 +37,22 @@ class Course extends Model
         'default_passing_score' => 'float',
         'pretest_passing_score' => 'float',
         'posttest_passing_score' => 'float',
+        'learning_objectives' => 'array', // TAMBAHAN
     ];
 
     public $incrementing = false;
     protected $keyType = 'string';
 
-    // Relations
+    // ... (relasi yang ada: modules, lessons, categories, tags, instructor) ...
+
     public function modules()
     {
-        return $this->hasMany(Module::class);
-    } // kalau ada
+        return $this->hasMany(Module::class)->orderBy('order'); // Tambahkan orderBy
+    }
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
     }
-
     public function categories()
     {
         return $this->belongsToMany(Category::class, 'category_courses');
@@ -59,7 +61,6 @@ class Course extends Model
     {
         return $this->belongsToMany(Tag::class, 'course_tags');
     }
-
     public function instructor()
     {
         return $this->belongsTo(User::class, 'instructor_id', 'id');
@@ -73,6 +74,15 @@ class Course extends Model
     public function posttest()
     {
         return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'posttest');
+    }
+
+    /**
+     * TAMBAHAN: Relasi untuk semua kuis yang terkait dengan course ini
+     * (termasuk pretest dan posttest).
+     */
+    public function quizzes()
+    {
+        return $this->morphMany(Quiz::class, 'quizzable');
     }
 
     public function enrollments()

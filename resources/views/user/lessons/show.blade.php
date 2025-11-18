@@ -8,6 +8,35 @@
         white-space: pre-wrap;
     }
 
+    /* Layout utama untuk konten + sidebar desktop */
+    .lesson-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        /* default: 1 kolom (mobile) */
+    }
+
+    @media (min-width: 1024px) {
+        .lesson-layout {
+            grid-template-columns: 22rem minmax(0, 1fr);
+            /* sidebar + konten */
+        }
+
+        .lesson-layout.sidebar-collapsed {
+            grid-template-columns: minmax(0, 1fr);
+            /* cuma konten (sidebar disembunyikan) */
+        }
+
+        .desktop-sidebar {
+            transition: transform .2s ease, opacity .2s ease;
+        }
+
+        .desktop-sidebar.collapsed {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+    }
+
     /* Offcanvas mobile */
     .offcanvas-enter {
         transform: translateX(-100%);
@@ -112,6 +141,16 @@ $gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '
         </div>
 
         <div class="flex items-center gap-2">
+            {{-- Toggle sidebar desktop --}}
+            <button id="btn-toggle-desktop-sidebar"
+                class="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h10M4 18h8" />
+                </svg>
+                <span id="btn-toggle-desktop-sidebar-text" class="text-sm">Sembunyikan Materi</span>
+            </button>
+
+            {{-- Tombol offcanvas mobile --}}
             <button id="btn-open-sidebar"
                 class="lg:hidden inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-800">
                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -137,10 +176,10 @@ $gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '
         <span class="font-semibold text-gray-700">{{ $lesson->title ?? 'Pelajaran' }}</span>
     </nav>
 
-    <div class="grid grid-cols-1 lg:grid-cols-[22rem,1fr] gap-4 sm:gap-5">
+    <div id="lesson-layout" class="lesson-layout gap-4 sm:gap-5">
 
         {{-- Desktop sidebar --}}
-        <aside class="hidden lg:block">
+        <aside id="desktop-sidebar" class="hidden lg:block desktop-sidebar">
             <div class="sticky top-4">
                 <div
                     class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
@@ -414,7 +453,7 @@ $gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '
 
 @push('scripts')
 <script>
-    // Sidebar offcanvas controls
+    // Sidebar offcanvas controls (mobile)
     const oc  = document.getElementById('offcanvas');
     const bg  = document.getElementById('offcanvas-backdrop');
     const btnOpen  = document.getElementById('btn-open-sidebar');
@@ -446,9 +485,30 @@ $gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '
     bg && bg.addEventListener('click', closeSidebar);
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeSidebar(); });
 
+    // Toggle sidebar desktop (hide/show)
+    (function () {
+        const layout = document.getElementById('lesson-layout');
+        const desktopSidebar = document.getElementById('desktop-sidebar');
+        const btnToggleDesktop = document.getElementById('btn-toggle-desktop-sidebar');
+        const btnText = document.getElementById('btn-toggle-desktop-sidebar-text');
+
+        if (!layout || !desktopSidebar || !btnToggleDesktop || !btnText) return;
+
+        btnToggleDesktop.addEventListener('click', () => {
+            const collapsed = desktopSidebar.classList.toggle('collapsed');
+
+            if (collapsed) {
+                layout.classList.add('sidebar-collapsed');
+                btnText.textContent = 'Tampilkan Materi';
+            } else {
+                layout.classList.remove('sidebar-collapsed');
+                btnText.textContent = 'Sembunyikan Materi';
+            }
+        });
+    })();
+
     // Heuristic fallback: jika iframe gagal load (embedding diblokir by CSP/age/region),
-    // kita tampilkan fallback setelah timeout singkat. Ini bukan 100% akurat
-    // karena cross-origin, tetapi memperbaiki UX ketika embed blocked.
+    // kita tampilkan fallback setelah timeout singkat.
     (function(){
         const iframe = document.getElementById('lesson-iframe');
         if(!iframe) return;
@@ -468,9 +528,6 @@ $gdriveEmbedSrc = $gdriveId ? 'https://drive.google.com/file/d/' . $gdriveId . '
             clearTimeout(t);
             // keep iframe visible
         });
-
-        // If user clicks fallback, open in new tab (link already present in markup)
-        // Nothing more to do here.
     })();
 </script>
 @endpush

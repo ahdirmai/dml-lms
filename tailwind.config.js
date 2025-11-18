@@ -9,14 +9,33 @@ module.exports = {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                // jadikan Inter font utama yang dipakai di seluruh app
+                sans: [
+                    "Inter",
+                    "system-ui",
+                    "-apple-system",
+                    "BlinkMacSystemFont",
+                    '"Segoe UI"',
+                    "Roboto",
+                    '"Helvetica Neue"',
+                    "Arial",
+                    '"Noto Sans"',
+                    "sans-serif",
+                    '"Apple Color Emoji"',
+                    '"Segoe UI Emoji"',
+                    '"Segoe UI Symbol"',
+                    '"Noto Color Emoji"',
+                ],
+            },
             colors: {
                 soft: "#F4F6F8", // background lembut
                 dark: "#343A40",
                 danger: "#B00E24",
-                accent: "#37BCD8", // Warna sekunder (oranye di HTML asli)
-                brand: "#09759A", // warna utama (biru tua di HTML asli)
+                accent: "#37BCD8", // Warna sekunder
+                brand: "#09759A", // warna utama
 
-                // Warna tambahan dari Testttt.html untuk leaderboard
+                // Warna tambahan untuk leaderboard
                 "green-prd": "#DFF5E1",
                 "red-prd": "#FBE5E5",
                 "medal-gold": "#FFC000",
@@ -49,6 +68,6 @@ module.exports = {
     ],
     plugins: [
         require("@tailwindcss/typography"), // Plugin untuk 'prose'
-        // require('@tailwindcss/forms'), // aktifkan kalau mau form look rapi
+        // require('@tailwindcss/forms'),
     ],
 };

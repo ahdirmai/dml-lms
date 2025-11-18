@@ -1,13 +1,18 @@
 <?php
 
-namespace App\Http\Controllers\User;
+namespace App\Http\Controllers\User; // Pastikan namespace Anda benar
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // <-- 1. Tambahkan ini
-use App\Models\Lms\Course;            // <-- 2. Tambahkan ini
-use App\Models\Lms\Enrollment;        // <-- 3. Tambahkan ini
-use App\Models\Lms\LessonProgress;    // <-- 4. Tambahkan ini
+use Illuminate\Support\Facades\Auth;
+use App\Models\Lms\Course;
+use App\Models\Lms\Enrollment;
+use App\Models\Lms\LessonProgress;
+use App\Models\Lms\QuizAnswer;
+use App\Models\Lms\QuizAttempt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class CourseController extends Controller
 {
@@ -17,24 +22,21 @@ class CourseController extends Controller
      */
     public function index(Request $request)
     {
+        // ... (Fungsi index Anda tidak diubah) ...
         $user = Auth::user();
         $activeTab = $request->string('tab')->toString() ?: 'in_progress';
 
-        // Tentukan status enrollment berdasarkan tab
-        // 'in_progress' bisa mencakup 'assigned' (belum mulai) dan 'active' (sedang berjalan)
         $statusMap = [
             'in_progress' => ['assigned', 'active'],
             'completed'   => ['completed'],
-            'private'     => [], // Logika 'private' mungkin perlu penyesuaian
+            'private'     => [],
         ];
 
-        // Ambil enrollments user, filter berdasarkan status di tab
         $query = $user->enrollments()
-            ->with('course', 'course.instructor') // Eager load relasi course
-            ->whereHas('course'); // Pastikan course masih ada
+            ->with('course', 'course.instructor')
+            ->whereHas('course');
 
         if ($activeTab === 'private') {
-            // Asumsi 'private' adalah status di course, bukan enrollment
             $query->whereHas('course', fn($q) => $q->where('status', 'private'));
         } else {
             $query->whereIn('status', $statusMap[$activeTab] ?? ['active']);
@@ -42,12 +44,8 @@ class CourseController extends Controller
 
         $enrollments = $query->get();
 
-        // 1. Hitung progres untuk setiap enrollment
-        // Ini bisa menjadi query N+1, pertimbangkan optimasi jika berat
         $coursesData = $enrollments->map(function ($enrollment) use ($activeTab) {
             $course = $enrollment->course;
-
-            // Hitung progres
             $totalLessons = $course->lessons()->count();
             $completedLessons = $enrollment->lessonProgress()->completed()->count();
             $percent = ($totalLessons > 0) ? (int)(($completedLessons / $totalLessons) * 100) : 0;
@@ -55,7 +53,7 @@ class CourseController extends Controller
             $cta = 'Lihat Kursus';
             $cta_kind = 'primary';
             if ($enrollment->status === 'completed') {
-                $cta = 'Lihat Sertifikat'; // Ganti logikanya
+                $cta = 'Lihat Sertifikat';
                 $cta_kind = 'success';
             } elseif ($percent > 0) {
                 $cta = 'Lanjutkan Belajar';
@@ -66,7 +64,6 @@ class CourseController extends Controller
             return [
                 'id'        => $course->id,
                 'title'     => $course->title,
-                // Ambil kategori pertama, atau ganti dengan logika Anda
                 'category'  => $course->categories()->first()->name ?? 'Umum',
                 'instructor' => $course->instructor->name ?? 'Internal',
                 'thumbnail' => $course->thumbnail_path ?? 'https://picsum.photos/seed/' . $course->id . '/800/400',
@@ -74,12 +71,10 @@ class CourseController extends Controller
                 'done'      => "$completedLessons/$totalLessons Pelajaran",
                 'cta'       => $cta,
                 'cta_kind'  => $cta_kind,
-                // Status untuk filtering tab
                 'status'    => $activeTab,
             ];
         });
 
-        // 2. Hitung total untuk badge tab
         $counts = [
             'in_progress' => $user->enrollments()->whereIn('status', ['assigned', 'active'])->count(),
             'completed'   => $user->enrollments()->where('status', 'completed')->count(),
@@ -88,13 +83,13 @@ class CourseController extends Controller
 
         return view('user.courses.index', [
             'activeTab' => $activeTab,
-            'courses'   => $coursesData, // Data dinamis
+            'courses'   => $coursesData,
             'tabs'      => [
                 'in_progress' => 'Sedang Dipelajari',
                 'completed'   => 'Telah Selesai',
-                'private'     => 'Kursus Private', // Anda bisa ganti/hapus tab ini
+                'private'     => 'Kursus Private',
             ],
-            'counts'    => $counts, // Count dinamis
+            'counts'    => $counts,
         ]);
     }
 
@@ -102,6 +97,8 @@ class CourseController extends Controller
     /**
      * Tampilkan detail kursus, modul, dan progres user.
      * (Versi dinamis untuk show.blade.php)
+     *
+     * *** DIPERBARUI DENGAN LOGIKA PRE-TEST GATE & DATA TES NYATA ***
      */
     public function show(Request $request, string $courseId)
     {
@@ -111,16 +108,21 @@ class CourseController extends Controller
             return redirect()->route('login');
         }
 
-        // Ambil course DAN relasi modul + lessons (diurutkan)
-        $course = Course::with([
-            'modules' => fn($q) => $q->orderBy('order', 'asc'),
-            'modules.lessons' => fn($q) => $q->with('quiz')->orderBy('order_no', 'asc'),
-            // 'pretest', 'posttest' // Diperlukan untuk Pre/Post test dinamis
-        ])->findOrFail($courseId);
-
-        // Ambil data pendaftaran (enrollment) user di kursus ini
-        $enrollment = $course->enrollments()
-            ->where('user_id', $user->id)
+        // Ambil enrollment user, DAN semua relasi yang diperlukan
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $courseId)
+            ->with([
+                // Load course & relasinya (modul, lesson, quiz, pre/post test)
+                'course' => fn($q) => $q->with([
+                    'modules' => fn($q_mod) => $q_mod->orderBy('order', 'asc'),
+                    'modules.lessons' => fn($q_less) => $q_less->with('quiz')->orderBy('order_no', 'asc'),
+                    'pretest', // Load definisi pretest
+                    'posttest' // Load definisi posttest
+                ]),
+                'lessonProgress',         // Load semua progres pelajaran
+                'latestPretestAttempt',   // Load attempt pretest terakhir
+                'latestPosttestAttempt'   // Load attempt posttest terakhir
+            ])
             ->first();
 
         if (!$enrollment) {
@@ -128,23 +130,35 @@ class CourseController extends Controller
             abort(403, 'Anda tidak terdaftar pada kursus ini.');
         }
 
-        // 2. Ambil Data Progres Pelajaran
-        // Ambil semua ID lesson yang sudah selesai untuk enrollment ini
-        // Kita "flip" arraynya agar bisa dicek dengan `isset()` (lebih cepat)
-        $completedLessonIds = LessonProgress::where('enrollment_id', $enrollment->id)
+        $course = $enrollment->course; // Dapatkan objek course dari enrollment
+
+        // 2. LOGIKA BARU: Pengecekan Pre-test Gate
+        $pretestGateActive = false; // Flag untuk mengunci lesson
+        $latestPretestAttempt = $enrollment->latestPretestAttempt;
+
+        if ($course->require_pretest_before_content && $course->pretest) {
+            if (!$latestPretestAttempt || !$latestPretestAttempt->passed) {
+                // Jika pretest wajib, dan user belum ambil ATAU belum lulus,
+                // aktifkan gerbang (kunci semua lesson)
+                $pretestGateActive = true;
+            }
+        }
+
+        // 3. Ambil Data Progres Pelajaran
+        $completedLessonIds = $enrollment->lessonProgress
             ->where('status', 'completed')
             ->pluck('lesson_id')
-            ->flip(); // Hasil: [ 'id-lesson-1' => 0, 'id-lesson-2' => 1, ... ]
+            ->flip(); // Hasil: [ 'id-lesson-1' => 0, ... ]
 
-        // 3. Siapkan Array Modul & Lesson (sesuai format view)
+        // 4. Siapkan Array Modul & Lesson (sesuai format view)
         $totalLessons = 0;
         $completedLessonCount = 0;
 
-        // Kita gunakan map untuk mengubah koleksi Eloquent menjadi array
-        $modules = $course->modules->map(function ($module) use ($completedLessonIds, &$totalLessons, &$completedLessonCount) {
+        // Gunakan map untuk mengubah koleksi Eloquent menjadi array
+        // PERBARUI: Kirim $pretestGateActive ke dalam map
+        $modules = $course->modules->map(function ($module) use ($completedLessonIds, &$totalLessons, &$completedLessonCount, $pretestGateActive) {
 
-            $lessons = $module->lessons->map(function ($lesson) use ($completedLessonIds, &$completedLessonCount) {
-                // Cek apakah ID lesson ini ada di daftar yang sudah selesai
+            $lessons = $module->lessons->map(function ($lesson) use ($completedLessonIds, &$completedLessonCount, $pretestGateActive) {
                 $isDone = isset($completedLessonIds[$lesson->id]);
                 if ($isDone) {
                     $completedLessonCount++;
@@ -158,68 +172,224 @@ class CourseController extends Controller
                     'type'      => $lesson->kind, // 'video', 'text', 'quiz'
                     'duration'  => $lesson->duration_minutes ? $lesson->duration_minutes . 'm' : '-',
                     'is_done'   => $isDone,
-                    // Logika 'questions' bergantung pada relasi 'quiz' Anda
-                    // Asumsi: $lesson->quiz->questions()->count() atau ada kolom 'question_count'
+                    'is_locked' => $pretestGateActive, // LOGIKA BARU DITAMBAHKAN
                     'questions' => $isQuiz ? ($lesson->quiz->questions_count ?? 0) : 0,
                 ];
             });
 
-            // Akumulasi total pelajaran
             $totalLessons += $lessons->count();
 
             return [
                 'id'      => $module->id,
                 'title'   => $module->title,
-                'lessons' => $lessons->all(), // Ubah koleksi lesson menjadi array
+                'lessons' => $lessons->all(),
             ];
         });
 
-        // 4. Hitung Progres Keseluruhan
+        // 5. Hitung Progres Keseluruhan
         $percent = ($totalLessons > 0) ? (int)(($completedLessonCount / $totalLessons) * 100) : 0;
 
-        // Cari aktivitas lesson terakhir user
-        $lastProgress = LessonProgress::where('enrollment_id', $enrollment->id)
-            ->orderBy('last_activity_at', 'desc')
-            ->first();
+        $lastProgress = $enrollment->lessonProgress->sortByDesc('last_activity_at')->first();
 
         $progress = [
             'percent'        => $percent,
             'last_lesson_id' => $lastProgress ? $lastProgress->lesson_id : null,
         ];
 
-        // 5. Hasil Pre-test & Post-test (MASIH DUMMY)
-        // NOTE: Logika ini memerlukan model 'Quiz' dan 'QuizAttempt' yang terdefinisi penuh.
-        // Ganti bagian ini dengan query Anda untuk mengambil hasil tes terbaik (best attempt)
-        // dari user untuk pretest dan posttest kursus ini.
-
-        // Contoh query (jika model sudah ada):
-        // $pretestQuiz = $course->pretest;
-        // $bestPretest = $pretestQuiz ? $pretestQuiz->attempts()->where('enrollment_id', $enrollment->id)->orderBy('score', 'desc')->first() : null;
-        // $pretestResult = formatTestResult($bestPretest); // Buat helper function
-
-        $pretestResult = [
-            'score' => 62,
-            'total' => 100,
-            'date'  => now()->subDays(6)->format('d M Y'),
-            'badge' => 'Perlu Pemanasan',
-            'desc'  => 'Cukup mengenal dasar. Disarankan ulang materi modul 1.',
-        ];
-        $posttestResult = [
-            'score' => 88,
-            'total' => 100,
-            'date'  => now()->format('d M Y'),
-            'badge' => 'Siap Produksi',
-            'desc'  => 'Pemahaman sudah matang. Lanjut proyek nyata.',
-        ];
+        // 6. Hasil Pre-test & Post-test (DATA NYATA)
+        // Menggunakan helper baru di bawah
+        $pretestResult = $this->formatTestResult($latestPretestAttempt, 'pre');
+        $posttestResult = $this->formatTestResult($enrollment->latestPosttestAttempt, 'post');
 
 
-        // 6. Kirim data dinamis ke view
+        // 7. Kirim data dinamis ke view
         return view('user.courses.show', compact(
-            'course',           // Data course dari Eloquent
-            'progress',         // Array progress yang sudah dihitung
-            'modules',          // Array modules & lessons yang sudah diformat
-            'pretestResult',    // Masih dummy, ganti dengan data dinamis
-            'posttestResult'    // Masih dummy, ganti dengan data dinamis
+            'course',
+            'progress',
+            'modules',
+            'pretestResult',    // Sekarang data nyata
+            'posttestResult',   // Sekarang data nyata
+            'pretestGateActive' // Flag baru untuk view
         ));
+    }
+
+    /**
+     * HELPER BARU
+     * Format hasil attempt kuis untuk ditampilkan di view.
+     */
+    private function formatTestResult(?QuizAttempt $attempt, string $type): ?array
+    {
+        if (!$attempt) {
+            return null;
+        }
+
+        $score = (int) $attempt->score; // Ubah ke integer
+        $badge = '';
+        $desc = '';
+
+        if ($attempt->passed) {
+            $badge = ($type === 'pre') ? 'Pemahaman Awal Baik' : 'Lulus';
+            $desc = "Anda lulus $type-test dengan nilai $score.";
+        } else {
+            $badge = 'Perlu Peningkatan';
+            $desc = "Nilai $type-test Anda ($score) belum memenuhi skor minimum.";
+            if ($type === 'pre') {
+                $desc .= ' Selesaikan pre-test untuk membuka materi.';
+            }
+        }
+
+        return [
+            'score' => $score,
+            'total' => 100,
+            'date'  => $attempt->finished_at->format('d M Y'),
+            'badge' => $badge,
+            'desc'  => $desc,
+        ];
+    }
+
+
+    /**
+     * Menangani submit Pre-Test atau Post-Test dari modal.
+     */
+    public function submitTest(Request $request, Course $course, $type)
+    {
+        // ... (Fungsi submitTest Anda tidak diubah) ...
+        $user = Auth::user();
+        $finalScore = 0;
+        $redirectUrl = null;
+
+        if (!in_array($type, ['pre', 'post'])) {
+            return response()->json(['success' => false, 'message' => 'Jenis tes tidak valid.'], 400);
+        }
+
+        try {
+            DB::transaction(function () use ($request, $course, $type, $user, &$finalScore, &$redirectUrl) {
+
+                $enrollment = Enrollment::where('user_id', $user->id)
+                    ->where('course_id', $course->id)
+                    ->firstOrFail();
+
+                $quiz = ($type === 'pre') ? $course->pretest : $course->posttest;
+
+                if (!$quiz) {
+                    throw new \Exception('Kuis tidak ditemukan untuk kursus ini.');
+                }
+
+                $questions = $quiz->questions()->with('options')->get();
+                $userAnswers = json_decode($request->input('answers', '{}'), true);
+
+                $totalQuestions = $questions->count();
+                $correctCount = 0;
+                $now = now();
+
+                $attempt = QuizAttempt::create([
+                    'id' => (string) Str::uuid(),
+                    'quiz_id' => $quiz->id,
+                    'user_id' => $user->id,
+                    'attempt_no' => 1, // TODO: Implementasi increment
+                    'started_at' => $now,
+                    'finished_at' => $now,
+                    'score' => 0,
+                    'passed' => false,
+                ]);
+
+                $answersToCreate = [];
+
+                foreach ($questions as $index => $question) {
+                    $answerKey = "q_$index";
+                    $selectedOptionIndex = $userAnswers[$answerKey] ?? null;
+
+                    $selectedOption = ($selectedOptionIndex !== null)
+                        ? $question->options->get($selectedOptionIndex)
+                        : null;
+
+                    $isCorrect = $selectedOption && $selectedOption->is_correct;
+
+                    if ($isCorrect) {
+                        $correctCount++;
+                    }
+
+                    $answersToCreate[] = new QuizAnswer([
+                        'id' => (string) Str::uuid(),
+                        'attempt_id' => $attempt->id,
+                        'question_id' => $question->id,
+                        'selected_option_id' => $selectedOption?->id,
+                        'is_correct' => $isCorrect,
+                        'score_awarded' => $isCorrect ? ($question->score ?? 1) : 0,
+                    ]);
+                }
+
+                $attempt->answers()->saveMany($answersToCreate);
+
+                $finalScore = ($totalQuestions > 0) ? round(($correctCount / $totalQuestions) * 100) : 100;
+
+                $attempt->score = $finalScore;
+                $attempt->passed = $finalScore >= $quiz->effective_passing_score;
+                $attempt->save();
+
+                if ($type === 'pre') {
+                    $enrollment->status = 'active'; // Menggunakan status 'active'
+                    $enrollment->save();
+                    $redirectUrl = route('user.courses.show', $course->id);
+                }
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Tes berhasil disimpan!',
+            'score' => $finalScore,
+            'redirectUrl' => $redirectUrl,
+        ]);
+    }
+
+    /**
+     * Menangani submit Review (bintang) setelah Post-Test.
+     */
+    public function submitReview(Request $request, Course $course)
+    {
+        // ... (Fungsi submitReview Anda tidak diubah) ...
+        $user = Auth::user();
+
+        $validator = Validator::make($request->all(), [
+            'stars' => 'required|integer|min:1|max:5',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+            ], 422);
+        }
+
+        try {
+            DB::transaction(function () use ($request, $course, $user) {
+                $enrollment = Enrollment::where('user_id', $user->id)
+                    ->where('course_id', $course->id)
+                    ->firstOrFail();
+
+                // Asumsi ada kolom 'review_stars' di tabel enrollments
+                $enrollment->review_stars = $request->input('stars');
+                $enrollment->status = 'completed';
+                $enrollment->completed_at = now();
+                $enrollment->save();
+            });
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ulasan Anda telah disimpan.',
+            'redirectUrl' => route('user.courses.show', $course->id) . '?review=success'
+        ]);
     }
 }

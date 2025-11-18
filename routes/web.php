@@ -70,6 +70,15 @@ Route::name('user.')
 
         Route::get('/courses/{course}', [UserCourseController::class, 'show'])->name('courses.show');
         Route::get('/lessons/{lesson}', [UserLessonController::class, 'show'])->name('lessons.show');
+
+        Route::post('/courses/{course}/test/{type}', [UserCourseController::class, 'submitTest'])
+            ->name('courses.test.submit');
+
+        /**
+         * Endpoint untuk menangani submit review (bintang).
+         */
+        Route::post('/courses/{course}/review', [UserCourseController::class, 'submitReview'])
+            ->name('courses.review.submit');
     });
 
 /*

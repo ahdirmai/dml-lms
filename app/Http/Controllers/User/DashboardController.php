@@ -1,41 +1,220 @@
 <?php
 
-
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Lms\Course; // Tambahkan
+use App\Models\Lms\Enrollment; // Tambahkan
+use App\Models\Lms\LessonProgress; // Tambahkan
+use App\Models\Lms\Quiz; // Tambahkan
+use App\Models\Lms\QuizAttempt; // Tambahkan
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth; // Tambahkan
+use Illuminate\Database\Eloquent\Collection; // Tambahkan
 
 class DashboardController extends Controller
 {
     public function index()
     {
-        // 1. Dummy User Info
+        // 1. Dapatkan User Info dari Auth
+        $user = Auth::user();
         $userInfo = [
-            'name' => "Bagas Satria",
-            'position' => "Mekanik",
-            'vessel' => "Kapal TSL 02",
-            'rankId' => 105,
+            'name' => $user->name,
+            // Asumsikan 'position' ada di model User Anda.
+            // Jika tidak, ganti dengan 'Karyawan' atau data lain.
+            'position' => $user->position ?? 'Karyawan',
+            'vessel' => $user->vessel ?? 'N/A',
+            'rankId' => $user->rankId ?? null,
         ];
 
-        // 2. Dummy Courses Data
-        $courses = $this->getDummyCourses();
+        // 2. Dapatkan Data Kursus Nyata
+        $enrollments = $this->getRealCoursesData($user->id);
 
-        // 3. Dummy Leaderboard Data
+        // 3. Format data agar sesuai dengan blade
+        $coursesArray = $this->formatEnrollmentsForView($enrollments);
+
+        // 4. Dummy Leaderboard Data (Sesuai permintaan)
         $leaderboardData = $this->getDummyLeaderboard();
 
-        // 4. Calculate Performance Stats (sebelumnya di JS, sekarang di backend)
-        $performance = $this->calculatePerformance($courses);
+        // 5. Calculate Performance Stats (menggunakan data $coursesArray yang baru)
+        $performance = $this->calculatePerformance($coursesArray);
 
         return view('user.dashboard.index', [
             'userInfo' => $userInfo,
-            'courses' => $courses,
+            'courses' => $coursesArray, // Gunakan data yang sudah diformat
             'leaderboardData' => $leaderboardData,
             'performance' => $performance,
         ]);
     }
+
+    /**
+     * Helper untuk mengambil data kursus nyata dari database
+     * menggunakan Eager Loading untuk menghindari N+1 query.
+     */
+    private function getRealCoursesData(string $userId): Collection
+    {
+        return Enrollment::where('user_id', $userId)
+            ->with([
+                // Load relasi course
+                'course' => function ($query) {
+                    $query
+                        // Hitung total modul & total durasi pelajaran
+                        ->withCount(['modules', 'lessons'])
+                        ->withSum('lessons', 'duration_minutes')
+                        // Load relasi dari course
+                        ->with([
+                            'categories', // Untuk nama kategori
+                            'instructor', // Untuk 'assignedBy'
+                            // Load modul, pelajaran di dalamnya, dan total durasinya
+                            'modules' => function ($q_mod) {
+                                $q_mod->withSum('lessons', 'duration_minutes')
+                                    ->with('lessons:id,module_id') // Hanya perlu ID pelajaran
+                                    ->orderBy('order');
+                            },
+                            // Load pre/post test, pertanyaan, dan opsi
+                            'pretest.questions.options',
+                            'posttest.questions.options',
+                        ]);
+                },
+                // Load semua progress pelajaran
+                'lessonProgress',
+                // Load attempt kuis terakhir (relasi baru di Enrollment.php)
+                'latestPretestAttempt',
+                'latestPosttestAttempt',
+                // Load tanggal jatuh tempo
+                'dueDate'
+            ])
+            ->get();
+    }
+
+    /**
+     * Helper untuk mengubah Collection Eloquent menjadi array
+     * yang sesuai dengan struktur blade/JS.
+     */
+    private function formatEnrollmentsForView(Collection $enrollments): array
+    {
+        return $enrollments->map(function (Enrollment $enrollment) {
+            $course = $enrollment->course;
+
+            // Jika course tidak (lagi) ada, lewati
+            if (!$course) {
+                return null;
+            }
+
+            $lessonProgress = $enrollment->lessonProgress;
+            $totalLessons = $course->lessons_count ?? 0;
+            $completedLessons = $lessonProgress->where('status', 'completed')->count();
+            $hasInProgress = $lessonProgress->where('status', 'in_progress')->isNotEmpty();
+
+            $pretestScore = $enrollment->latestPretestAttempt?->score;
+            $posttestScore = $enrollment->latestPosttestAttempt?->score;
+
+            // --- Logika Progress & Status ---
+            $moduleProgress = 0;
+            if ($totalLessons > 0) {
+                // 90% progress berasal dari penyelesaian modul/pelajaran
+                $moduleProgress = ($completedLessons / $totalLessons) * 90;
+            } elseif ($pretestScore !== null) {
+                // Jika tidak ada pelajaran, pretest terisi = 10%
+                $moduleProgress = 10;
+            }
+
+            // 10% progress dari post-test
+            $postTestProgress = $posttestScore !== null ? 10 : 0;
+            $progress = round($moduleProgress + $postTestProgress);
+
+            // Tentukan Status
+            $dueDate = $enrollment->dueDate?->end_date;
+            $status = 'Not Started';
+
+            if ($dueDate && now()->gt($dueDate) && $enrollment->status !== 'completed') {
+                $status = 'Expired';
+            } elseif ($progress >= 100 || $enrollment->status === 'completed') {
+                $status = 'Completed';
+                $progress = 100;
+            } elseif ($completedLessons > 0 || $hasInProgress || $pretestScore !== null) {
+                $status = 'In Progress';
+            }
+
+            // --- Format Data Modul ---
+            $modulesData = [];
+            $courseInProgress = ($status === 'In Progress');
+            $firstUnlockedModuleFound = false; // Untuk menentukan modul 'in-progress' pertama
+
+            foreach ($course->modules as $module) {
+                $lessonIds = $module->lessons->pluck('id');
+                $totalModuleLessons = $lessonIds->count();
+                $completedCount = $lessonProgress->whereIn('lesson_id', $lessonIds)->where('status', 'completed')->count();
+                $inProgress = $lessonProgress->whereIn('lesson_id', $lessonIds)->where('status', 'in_progress')->isNotEmpty();
+
+                $modStatus = 'locked';
+                if ($totalModuleLessons > 0 && $completedCount === $totalModuleLessons) {
+                    $modStatus = 'completed';
+                    $firstUnlockedModuleFound = true;
+                } elseif ($inProgress || $completedCount > 0) {
+                    $modStatus = 'in-progress';
+                    $firstUnlockedModuleFound = true;
+                } elseif ($courseInProgress && !$firstUnlockedModuleFound && $pretestScore !== null) {
+                    // Jika kursus sedang berjalan, pretest selesai, dan ini modul pertama
+                    // yang belum selesai, tandai sebagai 'in-progress'.
+                    $modStatus = 'in-progress';
+                    $firstUnlockedModuleFound = true;
+                }
+
+                $modulesData[] = [
+                    'no' => $module->order,
+                    'title' => $module->title,
+                    'duration' => $module->lessons_sum_duration_minutes ?? 0,
+                    'status' => $modStatus,
+                ];
+            }
+
+            // --- Format Data Kuis (untuk modal JS) ---
+            $preTest = $course->pretest?->questions->map(function ($q) {
+                return [
+                    'q' => $q->question_text,
+                    'options' => $q->options->sortBy('order_no')->pluck('option_text')->all(),
+                    // Cari index dari jawaban yang benar
+                    'answer' => $q->options->search(fn($opt) => $opt->is_correct),
+                ];
+            }) ?? [];
+
+            $postTest = $course->posttest?->questions->map(function ($q) {
+                return [
+                    'q' => $q->question_text,
+                    'options' => $q->options->sortBy('order_no')->pluck('option_text')->all(),
+                    'answer' => $q->options->search(fn($opt) => $opt->is_correct),
+                ];
+            }) ?? [];
+
+            // --- Return Array Final ---
+            return [
+                'id' => $course->id, // JS menggunakan ini sebagai courseId
+                'title' => $course->title,
+                'subtitle' => $course->subtitle,
+                'category' => $course->categories->first()?->name ?? 'Uncategorized',
+                'assignedOn' => $enrollment->enrolled_at->format('d M Y'),
+                'assignedBy' => $course->instructor?->name ?? 'Administrator',
+                'totalModules' => $course->modules_count,
+                'totalDuration' => $course->lessons_sum_duration_minutes ?? 0,
+                'preTestScore' => $pretestScore,
+                'postTestScore' => $posttestScore,
+                'progress' => $progress,
+                'lastActivity' => $lessonProgress->max('last_activity_at')?->format('d M Y') ?? '-',
+                'status' => $status,
+                'modules' => $modulesData,
+                'description' => $course->description,
+                'learningObjectives' => $course->learning_objectives ?? [],
+                'preTest' => $preTest,
+                'postTest' => $postTest,
+            ];
+        })->filter()->all(); // filter() menghapus nilai null
+    }
+
     /**
      * Helper untuk menghitung statistik performa.
+     * Logika ini tidak perlu diubah karena kita memformat data nyata
+     * agar sesuai dengan struktur yang diharapkan.
      */
     private function calculatePerformance(array $courses): array
     {
@@ -88,7 +267,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Helper untuk data leaderboard.
+     * Helper untuk data leaderboard. (Tetap dummy)
      */
     private function getDummyLeaderboard(): array
     {
@@ -116,94 +295,7 @@ class DashboardController extends Controller
 
     /**
      * Helper untuk data kursus.
+     * (TIDAK LAGI DIGUNAKAN, diganti oleh getRealCoursesData)
      */
-    private function getDummyCourses(): array
-    {
-        return [
-            [
-                'id' => 'course-1',
-                'title' => "Safety Management & Vessel Operations",
-                'subtitle' => "Sistem Manajemen Keselamatan Kapal dan Operasi",
-                'category' => "HSSE",
-                'assignedOn' => "12 Sep 2025",
-                'assignedBy' => "HSSE Dept.",
-                'totalModules' => 10,
-                'totalDuration' => 45,
-                'preTestScore' => null,
-                'postTestScore' => null,
-                'progress' => 0,
-                'lastActivity' => "-",
-                'status' => "Not Started",
-                'modules' => [
-                    ['no' => 1, 'title' => "Introduction to Safety Management", 'duration' => 4, 'status' => 'locked'],
-                    ['no' => 2, 'title' => "ISM Code Overview", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 3, 'title' => "Hazard Identification & Risk Assessment", 'duration' => 6, 'status' => 'locked'],
-                    ['no' => 4, 'title' => "Permit to Work System", 'duration' => 4, 'status' => 'locked'],
-                    ['no' => 5, 'title' => "PPE (Personal Protective Equipment)", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 6, 'title' => "Safe Working Practices", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 7, 'title' => "Emergency Procedures", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 8, 'title' => "Reporting & Documentation", 'duration' => 3, 'status' => 'locked'],
-                    ['no' => 9, 'title' => "Safety Meetings & Toolbox Talks", 'duration' => 4, 'status' => 'locked'],
-                    ['no' => 10, 'title' => "Continuous Improvement & Audits", 'duration' => 4, 'status' => 'locked'],
-                ],
-                'description' => "This training provides a foundational understanding of Safety Management Systems (SMS) for both vessel crew and onshore operations teams.",
-                'learningObjectives' => [
-                    "Understand the purpose and structure of the SMS manual",
-                    "Implement safe work procedures on board",
-                    "Identify emergency response responsibilities",
-                    "Recognize unsafe acts and report near-misses",
-                    "Apply continuous improvement to safety culture",
-                ],
-                'preTest' => [
-                    ['q' => "Apa tujuan utama SMS (Safety Management System)?", 'options' => ["Meningkatkan penjualan", "Mencegah kecelakaan & polusi", "Mengurangi jumlah kru", "Meningkatkan konsumsi bahan bakar"], 'answer' => 1],
-                    ['q' => "Salah satu komponen ISM adalah?", 'options' => ["Permit to Work", "Invoice Payment", "Marketing Plan", "None"], 'answer' => 0],
-                    ['q' => "Yang bukan PPE adalah?", 'options' => ["Helmet", "Gloves", "Shoes", "Sunglasses sebagai fashion"], 'answer' => 3]
-                ],
-                'postTest' => [
-                    ['q' => "Laporan near-miss sebaiknya dilakukan pada?", 'options' => ["Saat libur", "Tidak perlu", "Segera setelah kejadian", "Setahun sekali"], 'answer' => 2],
-                    ['q' => "Audit internal bertujuan untuk?", 'options' => ["Menjatuhkan pegawai", "Memperbaiki proses & kepatuhan", "Hanya formalitas", "Tidak penting"], 'answer' => 1],
-                    ['q' => "Continuous improvement berarti?", 'options' => ["Perbaikan terus menerus", "Henti setelah satu kali", "Hanya ide manajemen", "Tidak ada"], 'answer' => 0]
-                ]
-            ],
-            [
-                'id' => 'course-2',
-                'title' => "Emergency Procedures & Crew Response",
-                'subtitle' => "Prosedur Darurat dan Respon Awak Kapal",
-                'category' => "Operations",
-                'assignedOn' => "20 Sep 2025",
-                'assignedBy' => "Operations Training Dept",
-                'totalModules' => 8,
-                'totalDuration' => 35,
-                'preTestScore' => 70,
-                'postTestScore' => null,
-                'progress' => 40,
-                'lastActivity' => "25 Sep 2025",
-                'status' => "In Progress",
-                'modules' => [
-                    ['no' => 1, 'title' => "Introduction to Emergency Response", 'duration' => 4, 'status' => 'completed'],
-                    ['no' => 2, 'title' => "Alarm & Muster Procedures", 'duration' => 5, 'status' => 'completed'],
-                    ['no' => 3, 'title' => "Fire Drill", 'duration' => 6, 'status' => 'completed'],
-                    ['no' => 4, 'title' => "Abandon Ship Drill", 'duration' => 5, 'status' => 'in-progress'],
-                    ['no' => 5, 'title' => "Man Overboard", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 6, 'title' => "Oil Spill Management", 'duration' => 5, 'status' => 'locked'],
-                    ['no' => 7, 'title' => "Emergency Communication", 'duration' => 3, 'status' => 'locked'],
-                    ['no' => 8, 'title' => "Post-Emergency Review", 'duration' => 2, 'status' => 'locked'],
-                ],
-                'description' => "Pelatihan ini mencakup langkah-langkah kritis yang harus diikuti oleh semua kru dalam situasi darurat di kapal.",
-                'learningObjectives' => ["Identify emergency types", "Know each crew's role in drills", "Follow ISM emergency protocol", "Practice communication chain"],
-                'preTest' => [
-                    ['q' => "Langkah pertama saat alarm dibunyikan adalah?", 'options' => ["Lari keluar", "Pergi ke muster station", "Matikan alarm", "Tidak melakukan apa-apa"], 'answer' => 1],
-                    ['q' => "Abandon ship drill mensimulasikan?", 'options' => ["Kecelakaan kerja", "Evakuasi kapal", "Perbaikan mesin", "Check-in penumpang"], 'answer' => 1],
-                    ['q' => "Who must follow emergency chain?", 'options' => ["Only captain", "Only crew", "All crew & passengers", "Only engineers"], 'answer' => 2]
-                ],
-                'postTest' => [
-                    ['q' => "Komunikasi darurat harus dilakukan via?", 'options' => ["RUMOR", "Chain of command", "Media sosial", "Tidak perlu"], 'answer' => 1],
-                    ['q' => "Abandon ship drill dilaksanakan kapan?", 'options' => ["Secara rutin", "Sekali seumur hidup", "Saat kapal kosong", "Never"], 'answer' => 0],
-                    ['q' => "Fire drill tujuannya?", 'options' => ["Melatih respons kebakaran", "Dekorasi kapal", "Meningkatkan konsumsi bahan bakar", "Hiburan"], 'answer' => 0]
-                ]
-            ],
-            // Anda bisa menambahkan course-3 dan course-4 dari file HTML di sini jika perlu
-            // Untuk demo, 2 kursus sudah cukup
-        ];
-    }
+    // private function getDummyCourses(): array { ... }
 }

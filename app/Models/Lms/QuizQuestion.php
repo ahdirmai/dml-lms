@@ -22,4 +22,9 @@ class QuizQuestion extends Model
     {
         return $this->hasMany(QuizOption::class, 'question_id');
     }
+
+    public function answer()
+    {
+        return $this->hasMany(QuizAnswer::class, 'question_id');
+    }
 }
