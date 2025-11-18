@@ -19,6 +19,7 @@ class LessonController extends Controller
      */
     public function show(Request $request, string $lessonId)
     {
+        // return 'x';
         $user = Auth::user();
         if (!$user) {
             return redirect()->route('login');

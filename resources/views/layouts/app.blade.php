@@ -9,9 +9,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $title }}</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {{-- Font utama --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    {{-- Asset utama (Tailwind + JS app) --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     @stack('styles')
@@ -28,6 +32,7 @@
 
     /**
     * Helper kecil untuk menambahkan banyak item sekaligus.
+    *
     * @param array $target
     * @param array $items
     */
@@ -45,7 +50,8 @@
     'icon' => 'home',
     'href' => route('user.dashboard'),
     'active' => request()->routeIs('user.dashboard'),
-    ],[
+    ],
+    [
     'group' => null,
     'label' => 'My Courses',
     'icon' => 'book',
@@ -157,19 +163,19 @@
 
         {{-- Konten Utama --}}
         <div class="flex-1 lg:ml-64">
-            <main class="p-6 lg:p-8">
-                {{-- Topbar (Header akan disembunyikan di mobile) --}}
+            <main class="p-4 sm:p-6 lg:p-8 space-y-6">
+                {{-- Topbar (header bawaan, lebih cocok untuk desktop) --}}
                 <x-ui.topbar :avatar="auth()->user()->avatar_url ?? null" :header="$header" />
 
-                {{-- Header Terpisah (Hanya tampil di mobile) --}}
+                {{-- Header terpisah (khusus mobile / tablet, di bawah topbar) --}}
                 @isset($header)
-                <h2 class="text-xl font-semibold text-dark mb-6 hidden">
+                <h1 class="text-lg sm:text-xl font-semibold text-dark mb-4 lg:hidden">
                     {{ $header }}
-                </h2>
+                </h1>
                 @endisset
 
                 {{-- Slot Konten Halaman --}}
-                <div class="space-y-8">
+                <div class="space-y-6">
                     {{ $slot }}
                 </div>
             </main>
@@ -178,37 +184,82 @@
 
     @stack('scripts')
 
-    {{-- JS untuk Sidebar Toggle --}}
+    {{-- JS Sidebar Toggle (mobile experience + a11y lebih baik) --}}
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const sidebar = document.getElementById('main-sidebar');
-            const openBtn = document.getElementById('open-sidebar');
+            const sidebar  = document.getElementById('main-sidebar');
+            const openBtn  = document.getElementById('open-sidebar');
             const closeBtn = document.getElementById('close-sidebar');
             const backdrop = document.getElementById('sidebar-backdrop');
+            const body     = document.body;
+
+            if (!sidebar || !backdrop) return;
+
+            const setAria = (isOpen) => {
+                sidebar.setAttribute('aria-hidden', String(!isOpen));
+                if (openBtn) {
+                    openBtn.setAttribute('aria-expanded', String(isOpen));
+                }
+            };
+
+            const lockScroll = (lock) => {
+                if (lock) {
+                    body.classList.add('overflow-hidden');
+                } else {
+                    body.classList.remove('overflow-hidden');
+                }
+            };
 
             const openSidebar = () => {
-                if (sidebar && backdrop) {
-                    sidebar.classList.remove('-translate-x-full');
-                    backdrop.classList.remove('hidden');
-                }
+                sidebar.classList.remove('-translate-x-full');
+                backdrop.classList.remove('hidden');
+                lockScroll(true);
+                setAria(true);
             };
 
             const closeSidebar = () => {
-                if (sidebar && backdrop) {
-                    sidebar.classList.add('-translate-x-full');
-                    backdrop.classList.add('hidden');
-                }
+                sidebar.classList.add('-translate-x-full');
+                backdrop.classList.add('hidden');
+                lockScroll(false);
+                setAria(false);
             };
 
             if (openBtn) {
-                openBtn.addEventListener('click', openSidebar);
+                openBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openSidebar();
+                });
             }
+
             if (closeBtn) {
-                closeBtn.addEventListener('click', closeSidebar);
+                closeBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    closeSidebar();
+                });
             }
-            if (backdrop) {
-                backdrop.addEventListener('click', closeSidebar);
-            }
+
+            backdrop.addEventListener('click', closeSidebar);
+
+            // Tutup sidebar jika tekan ESC
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeSidebar();
+                }
+            });
+
+            // Jika resize ke layar besar (lg+), pastikan sidebar dianggap "terbuka"
+            window.addEventListener('resize', () => {
+                if (window.innerWidth >= 1024) {
+                    backdrop.classList.add('hidden');
+                    lockScroll(false);
+                    setAria(true);
+                    // biarkan kelas translate dikontrol oleh Tailwind (lg:translate-x-0)
+                } else {
+                    setAria(
+                        !sidebar.classList.contains('-translate-x-full')
+                    );
+                }
+            });
         });
     </script>
 </body>
