@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\CourseAssignController as AdminCourseAssignContro
 use App\Http\Controllers\Admin\CourseProgressController as AdminCourseProgressController;
 use App\Http\Controllers\Admin\IntegrationController;
 use App\Http\Controllers\Admin\UserIntegrationController;
+use App\Http\Controllers\Auth\SsoLoginController;
 // Instructor Controllers
 use App\Http\Controllers\Instructor\CourseAssignController as InstructorCourseAssignController;
 use App\Http\Controllers\Instructor\CourseController as InstructorCourseController;
@@ -57,6 +58,12 @@ Route::get('/', function () {
         default      => redirect()->route('dashboard'),
     };
 });
+
+
+Route::match(['GET', 'POST'], '/sso/login', SsoLoginController::class)
+    ->name('sso.login')
+    ->middleware('web');
+
 
 /*
 |--------------------------------------------------------------------------
