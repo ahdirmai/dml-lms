@@ -40,6 +40,10 @@
                         <x-ui.button type="button" id="btnOpenCreate" variant="primary" class="w-full md:w-auto">
                             + Create
                         </x-ui.button>
+                        <x-ui.button as="a" href="{{ route('admin.integration.users.index') }}" variant="primary"
+                            size="md">
+                            Integrasi User
+                        </x-ui.button>
                     </div>
                 </div>
             </div>

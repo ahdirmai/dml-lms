@@ -15,16 +15,26 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles;
 
+
+    public const STATUS_ACTIVE    = 'active';
+    public const STATUS_INACTIVE  = 'inactive';
+    public const STATUS_SUSPENDED = 'suspended';
+
     /**
      * The attributes that are mass assignable.
      *
      * @var list<string>
      */
     protected $fillable = [
+        'external_id',
         'name',
         'email',
         'password',
-        'active_role'
+        'active_role',
+        'lms_status',
+        // 'is_hr',
+        // 'is_employee'
+
     ];
 
     /**
@@ -50,6 +60,15 @@ class User extends Authenticatable
         ];
     }
 
+    public function isActive(): bool
+    {
+        return $this->lms_status === self::STATUS_ACTIVE;
+    }
+
+    public function profile()
+    {
+        return $this->hasOne(UserProfile::class);
+    }
     public function switchRole(string $roleName): bool
     {
         if (! $this->hasRole($roleName)) {

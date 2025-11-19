@@ -20,7 +20,8 @@ use App\Http\Controllers\Admin\LessonController as AdminLessonController;
 use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\CourseAssignController as AdminCourseAssignController;
 use App\Http\Controllers\Admin\CourseProgressController as AdminCourseProgressController;
-
+use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\UserIntegrationController;
 // Instructor Controllers
 use App\Http\Controllers\Instructor\CourseAssignController as InstructorCourseAssignController;
 use App\Http\Controllers\Instructor\CourseController as InstructorCourseController;
@@ -107,6 +108,24 @@ Route::prefix('admin')
 
         // RBAC
         Route::resource('users', UsersController::class)->except(['show']);
+
+        Route::prefix('integrations')->name('integration.')->group(function () {
+
+            // Halaman utama integrasi user (Blade view)
+            // GET /admin/integrations/users
+            Route::get('users', [UserIntegrationController::class, 'index'])
+                ->name('users.index');
+
+            // Preview data dari sistem internal (AJAX, JSON)
+            // POST /admin/integrations/users/preview
+            Route::post('users/preview', [UserIntegrationController::class, 'preview'])
+                ->name('users.preview');
+
+            // Import user yang dipilih (AJAX/normal POST)
+            // POST /admin/integrations/users/import
+            Route::post('users/import', [UserIntegrationController::class, 'import'])
+                ->name('users.import');
+        });
         Route::resource('roles', RolesController::class)->except(['show']);
         Route::resource('permissions', PermissionsController::class)->except(['show']);
 
