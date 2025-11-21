@@ -200,10 +200,12 @@ class CourseController extends Controller
                     if ($attempt->passed) {
                         $enrollment->status = 'active';
                         $enrollment->save();
+                        $this->userCourseService->initializeLessonProgress($enrollment);
                     }
                 } else {
                     $enrollment->status = 'active';
                     $enrollment->save();
+                    $this->userCourseService->initializeLessonProgress($enrollment);
                 }
             }
 

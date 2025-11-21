@@ -535,4 +535,35 @@ class UserCourseService
             'desc' => $desc,
         ];
     }
+
+    /**
+     * Initialize lesson progress for an enrollment.
+     * Creates 'not_started' records for all lessons in the course.
+     */
+    public function initializeLessonProgress(Enrollment $enrollment): void
+    {
+        $course = $enrollment->course;
+        if (! $course) {
+            return;
+        }
+
+        // Ambil semua lesson ID dari course ini
+        $lessons = $course->lessons()->get();
+
+        $now = now();
+
+        foreach ($lessons as $lesson) {
+            \App\Models\Lms\LessonProgress::firstOrCreate(
+                [
+                    'enrollment_id' => $enrollment->id,
+                    'lesson_id' => $lesson->id,
+                ],
+                [
+                    'status' => 'not_started',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+        }
+    }
 }
