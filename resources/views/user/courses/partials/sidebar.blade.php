@@ -24,6 +24,8 @@
 'hasPostTest' => false,
 'preDone' => false,
 'postDone' => false,
+'preScore' => 0,
+'postScore' => 0,
 'canReview' => false,
 ])
 
@@ -58,7 +60,7 @@
         </div>
 
         @php
-        $ctaDisabled = $pretestGateActive;
+        $ctaDisabled = $course->require_pretest_before_content && $pretestGateActive;
         @endphp
 
         {{-- CTA utama (disable kalau pretest belum tercapai) --}}
@@ -70,37 +72,66 @@
             {{ $ctaLabel }}
         </a>
 
-        {{-- Aksi cepat Pre-Test / Post-Test / Review (opsional) --}}
+        {{-- Aksi cepat Pre-Test / Post-Test / Review --}}
         @if($courseId && ($hasPreTest || $hasPostTest || $canReview))
-        <div class="mt-3 space-y-1.5">
-            <p class="text-[11px] font-semibold text-gray-500">Aksi Cepat</p>
-            <div class="flex flex-wrap gap-1.5">
+        <div class="mt-4 pt-4 border-t border-gray-100 space-y-3">
+            <p class="text-xs font-bold text-gray-900 uppercase tracking-wide">Evaluasi & Review</p>
+            <div class="space-y-2">
+                {{-- PRE-TEST --}}
                 @if($hasPreTest)
-                <button type="button" onclick="window.TestFlow?.startPreTest('{{ $courseId }}')" class="inline-flex items-center px-3 py-1.5 rounded-full border text-[11px]
-                                       {{ $preDone
-                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                            : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100' }}">
-                    <span class="w-1.5 h-1.5 rounded-full mr-1.5
-                                         {{ $preDone ? 'bg-emerald-500' : 'bg-blue-500' }}"></span>
-                    Pre-Test
-                </button>
+                    @if(!$preDone)
+                        <button type="button" onclick="window.TestFlow?.startPreTest('{{ $courseId }}')" 
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition group">
+                            <span class="text-xs font-semibold">Mulai Pre-Test</span>
+                            <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    @elseif($preScore < 100)
+                        <button type="button" onclick="if(confirm('Apakah Anda yakin ingin mengerjakan ulang Pre-Test? Nilai sebelumnya akan tertimpa.')) window.TestFlow?.startPreTest('{{ $courseId }}')" 
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition group">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold">Ulangi Pre-Test</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-200 text-amber-800 font-bold">{{ $preScore }}</span>
+                            </div>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                        </button>
+                    @else
+                        <div class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 cursor-default opacity-75">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold">Pre-Test Selesai</span>
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800 font-bold">100</span>
+                            </div>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                    @endif
                 @endif
 
+                {{-- POST-TEST --}}
                 @if($hasPostTest)
-                <button type="button" onclick="window.TestFlow?.startPostTest('{{ $courseId }}')"
-                    class="inline-flex items-center px-3 py-1.5 rounded-full border text-[11px]
-                                       {{ $postDone
-                                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                            : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100' }}">
-                    <span class="w-1.5 h-1.5 rounded-full mr-1.5 bg-emerald-500"></span>
-                    Post-Test
-                </button>
+                    @if($pct < 100)
+                        <div class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed" title="Selesaikan 100% materi untuk membuka Post-Test">
+                            <span class="text-xs font-semibold">Post-Test Terkunci</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </div>
+                    @else
+                        <button type="button" onclick="window.TestFlow?.startPostTest('{{ $courseId }}')" 
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition group">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-semibold">{{ $postDone ? 'Ulangi Post-Test' : 'Mulai Post-Test' }}</span>
+                                @if($postDone)
+                                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200 text-emerald-800 font-bold">{{ $postScore }}</span>
+                                @endif
+                            </div>
+                            <svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                    @endif
                 @endif
 
+                {{-- REVIEW --}}
                 @if($canReview)
-                <button type="button" onclick="window.TestFlow?.openReview('{{ $courseId }}')" class="inline-flex items-center px-3 py-1.5 rounded-full border text-[11px]
-                                       border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100">
-                    ★ Review
+                <button type="button" onclick="window.TestFlow?.openReview('{{ $courseId }}')" 
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 transition group">
+                    <span class="text-xs font-semibold">Beri Review</span>
+                    <svg class="w-4 h-4 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.383 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.383-2.46a1 1 0 00-1.175 0l-3.383 2.46c-.784.57-1.838-.196-1.539-1.118l1.287-3.966a1 1 0 00-.364-1.118L2.998 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z"/></svg>
                 </button>
                 @endif
             </div>
@@ -131,7 +162,7 @@
             </p>
             @endif
 
-            @if(!empty($valid))
+            @if(!empty($valid) && optional($course)->using_due_date)
             <p>Berlaku sampai:
                 <span class="font-medium text-gray-800">
                     {{ \Carbon\Carbon::parse($valid)->format('d M Y') }}

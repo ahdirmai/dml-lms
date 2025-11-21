@@ -254,7 +254,7 @@
             </div>
 
             {{-- Notes / Align dengan PRD --}}
-            <x-ui.card class="p-4">
+            {{-- <x-ui.card class="p-4">
                 <div class="text-sm text-dark/80">
                     <div class="font-semibold mb-1">Catatan Implementasi (sesuai PRD — Progress Tracking)</div>
                     <ul class="list-disc list-inside text-dark/70 space-y-1">
@@ -266,7 +266,7 @@
                         <li>Gunakan event (LessonCompleted → Recalculate Course Progress) untuk update realtime.</li>
                     </ul>
                 </div>
-            </x-ui.card>
+            </x-ui.card> --}}
         </div>
     </div>
 </x-app-layout>

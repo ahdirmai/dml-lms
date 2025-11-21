@@ -1,37 +1,44 @@
 {{-- resources/views/dashboard/partials/courses-section.blade.php --}}
-<section class="space-y-6">
+<section class="space-y-6" x-data="courseFilter()">
     <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-custom-soft border border-gray-100">
-        <h2 class="text-lg sm:text-xl font-bold mb-4 text-brand">
-            Semua Kelas (<span id="filter-status">All</span>)
-        </h2>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+            <h2 class="text-lg sm:text-xl font-bold text-brand">
+                Semua Kelas (<span x-text="activeFilter">All</span>)
+            </h2>
 
-        {{-- Filter buttons --}}
-        <div id="filter-buttons" class="flex space-x-2 md:space-x-4 mb-6 overflow-x-auto scrollbar-hide">
-            @foreach(['All','Completed','In Progress','Not Started','Expired'] as $filter)
-            <button onclick="filterCourses(event, '{{ $filter }}')"
-                class="filter-btn flex-shrink-0 px-4 py-2 text-xs sm:text-sm font-medium rounded-full transition-colors duration-200
-                        {{ $filter === 'All' ? 'bg-brand text-white shadow-md' : 'bg-white text-gray-700 hover:bg-soft border border-gray-200' }}"
-                data-filter="{{ $filter }}">
-                {{ $filter }}
-            </button>
-            @endforeach
+            {{-- Filter buttons --}}
+            <div class="flex space-x-2 overflow-x-auto scrollbar-hide pb-2 sm:pb-0">
+                @foreach(['All', 'Completed', 'In Progress', 'Not Started', 'Expired'] as $filter)
+                <button @click="setFilter('{{ $filter }}')"
+                    :class="activeFilter === '{{ $filter }}' ? 'bg-brand text-white shadow-md' : 'bg-white text-gray-700 hover:bg-soft border border-gray-200'"
+                    class="flex-shrink-0 px-4 py-2 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20"
+                    aria-pressed="{{ $filter === 'All' ? 'true' : 'false' }}"
+                    :aria-pressed="activeFilter === '{{ $filter }}'">
+                    {{ $filter }}
+                </button>
+                @endforeach
+            </div>
         </div>
 
         {{-- Course list --}}
-        <div id="course-list-container" class="space-y-5">
+        <div class="space-y-5 min-h-[200px]">
             @forelse($courses as $course)
             @php
             $courseId = $course['id'];
             $detailUrl = route('user.courses.show', $courseId);
+            $status = $course['status'] ?? 'Not Started';
             @endphp
-            <div class="course-card bg-white p-4 sm:p-5 rounded-xl shadow-custom-soft border border-gray-100 flex flex-col md:flex-row transition transform hover:scale-[1.01] duration-300 hover:shadow-lg"
-                data-status="{{ $course['status'] }}" style="display:flex;">
+            <div x-show="shouldShow('{{ $status }}')" x-transition:enter="transition ease-out duration-300"
+                x-transition:enter-start="opacity-0 transform scale-95"
+                x-transition:enter-end="opacity-100 transform scale-100"
+                class="bg-white p-4 sm:p-5 rounded-xl shadow-custom-soft border border-gray-100 flex flex-col md:flex-row transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+
                 {{-- Thumbnail --}}
                 <div
-                    class="w-full md:w-56 h-36 bg-soft rounded-lg overflow-hidden flex-shrink-0 mb-4 md:mb-0 md:mr-6 relative">
+                    class="w-full md:w-56 h-36 bg-soft rounded-lg overflow-hidden flex-shrink-0 mb-4 md:mb-0 md:mr-6 relative group-hover:ring-2 group-hover:ring-brand/20 transition-all">
                     <img src="https://placehold.co/400x300/09759A/FFFFFF?text=LMS&font=inter"
                         alt="{{ $course['title'] }}" class="w-full h-full object-cover">
-                    <div class="absolute top-2 left-2 badge bg-brand text-white font-semibold text-[0.7rem]">
+                    <div class="absolute top-2 left-2 badge bg-brand text-white font-semibold text-[0.7rem] shadow-sm">
                         {{ $course['category'] }}
                     </div>
                 </div>
@@ -39,10 +46,12 @@
                 {{-- Detail --}}
                 <div class="flex-grow flex flex-col justify-between">
                     <div>
-                        <h3 class="text-base sm:text-lg font-bold text-gray-800 hover:text-brand transition-colors">
-                            <a href="{{ $detailUrl }}">{{ $course['title'] }}</a>
+                        <h3 class="text-base sm:text-lg font-bold text-gray-800 group-hover:text-brand transition-colors">
+                            <a href="{{ $detailUrl }}" class="focus:outline-none focus:underline">
+                                {{ $course['title'] }}
+                            </a>
                         </h3>
-                        <p class="text-xs sm:text-sm text-gray-500 mb-3">
+                        <p class="text-xs sm:text-sm text-gray-500 mb-3 line-clamp-2">
                             {{ $course['subtitle'] }}
                         </p>
 
@@ -80,36 +89,26 @@
                             </div>
 
                             {{-- Status badge --}}
-                            @switch($course['status'])
-                            @case('Completed')
-                            <span class="badge badge-completed">
-                                <i data-lucide="check-circle" class="w-3 h-3 mr-1"></i>
-                                Completed
+                            @php
+                            $badgeClass = match($status) {
+                            'Completed' => 'bg-green-100 text-green-700',
+                            'In Progress' => 'bg-amber-50 text-amber-600',
+                            'Not Started' => 'bg-gray-100 text-gray-600',
+                            'Expired' => 'bg-red-100 text-red-600',
+                            default => 'bg-gray-100 text-gray-600'
+                            };
+                            $icon = match($status) {
+                            'Completed' => 'check-circle',
+                            'In Progress' => 'loader',
+                            'Not Started' => 'circle-dot',
+                            'Expired' => 'alert-triangle',
+                            default => 'circle'
+                            };
+                            @endphp
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
+                                <i data-lucide="{{ $icon }}" class="w-3 h-3 mr-1 {{ $status === 'In Progress' ? 'animate-spin' : '' }}"></i>
+                                {{ $status }}
                             </span>
-                            @break
-                            @case('In Progress')
-                            <span class="badge badge-in-progress">
-                                <i data-lucide="loader" class="w-3 h-3 mr-1 animate-spin"></i>
-                                In Progress
-                            </span>
-                            @break
-                            @case('Not Started')
-                            <span class="badge badge-not-started">
-                                <i data-lucide="circle-dot" class="w-3 h-3 mr-1"></i>
-                                Not Started
-                            </span>
-                            @break
-                            @case('Expired')
-                            <span class="badge badge-expired">
-                                <i data-lucide="alert-triangle" class="w-3 h-3 mr-1"></i>
-                                Expired
-                            </span>
-                            @break
-                            @default
-                            <span class="badge">
-                                {{ $course['status'] }}
-                            </span>
-                            @endswitch
                         </div>
                     </div>
 
@@ -117,17 +116,18 @@
                     <div
                         class="mt-4 md:mt-0 pt-4 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0">
                         <div class="flex-grow w-full sm:w-auto sm:mr-6">
-                            <p class="text-[11px] sm:text-xs font-medium mb-1 text-gray-600">
-                                Progress: {{ $course['progress'] }}%
-                            </p>
+                            <div class="flex justify-between text-[11px] sm:text-xs font-medium mb-1 text-gray-600">
+                                <span>Progress</span>
+                                <span>{{ $course['progress'] }}%</span>
+                            </div>
                             <div class="w-full bg-soft rounded-full h-2.5 overflow-hidden">
-                                <div class="h-2.5 rounded-full {{ $course['progress'] === 100 ? 'bg-green-500' : 'bg-brand' }}"
+                                <div class="h-2.5 rounded-full transition-all duration-500 {{ $course['progress'] === 100 ? 'bg-green-500' : 'bg-brand' }}"
                                     style="width:{{ $course['progress'] }}%">
                                 </div>
                             </div>
                         </div>
 
-                        <div class="w-full sm:w-auto">
+                        <div class="w-full sm:w-auto flex justify-end">
                             @php
                             $modules = collect($course['modules'] ?? []);
                             $allModulesDone = $modules->every(fn($m) => ($m['status'] ?? '') === 'completed');
@@ -136,52 +136,48 @@
                             $hasPostTest = !empty($course['postTest']) && !empty($course['submit_post_url']);
                             @endphp
 
-                            @if($course['status'] === 'Not Started')
+                            @if($status === 'Not Started')
                             @if($hasPreTest)
-                            {{-- Mulai Pre-Test di modal --}}
-                            <x-ui.button variant="primary" onclick="window.TestFlow?.startPreTest('{{ $courseId }}')">
+                            <x-ui.button variant="primary" size="sm" onclick="window.TestFlow?.startPreTest('{{ $courseId }}')">
                                 Start Pre-Test
                             </x-ui.button>
                             @else
-                            {{-- Kalau nggak ada pre-test, langsung ke detail kursus --}}
-                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="primary">
+                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="primary" size="sm">
                                 Mulai Belajar
                             </x-ui.button>
                             @endif
 
-                            @elseif($course['status'] === 'In Progress')
+                            @elseif($status === 'In Progress')
                             @if($allModulesDone && empty($course['postTestScore']) && $modules->count() > 0 &&
                             $hasPostTest)
-                            {{-- Semua modul selesai & belum ada post-test --}}
-                            <x-ui.button variant="primary" onclick="window.TestFlow?.startPostTest('{{ $courseId }}')">
+                            <x-ui.button variant="primary" size="sm" onclick="window.TestFlow?.startPostTest('{{ $courseId }}')">
                                 Lanjut Post-Test
                             </x-ui.button>
                             @else
-                            {{-- Lanjut nonton / belajar biasa --}}
-                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="primary">
+                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="primary" size="sm">
                                 Continue
                             </x-ui.button>
                             @endif
 
-                            @elseif($course['status'] === 'Completed')
+                            @elseif($status === 'Completed')
                             @if(!empty($course['submit_review_url']))
-                            <x-ui.button variant="secondary" onclick="window.TestFlow?.openReview('{{ $courseId }}')">
+                            <x-ui.button variant="secondary" size="sm" onclick="window.TestFlow?.openReview('{{ $courseId }}')">
                                 Review
                             </x-ui.button>
                             @else
-                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="secondary">
+                            <x-ui.button as="a" href="{{ $detailUrl }}" variant="secondary" size="sm">
                                 Lihat Detail
                             </x-ui.button>
                             @endif
 
-                            @elseif($course['status'] === 'Expired')
-                            <x-ui.button variant="subtle" disabled title="Hubungi admin untuk perpanjangan">
+                            @elseif($status === 'Expired')
+                            <x-ui.button variant="subtle" size="sm" disabled title="Hubungi admin untuk perpanjangan">
                                 Expired
                             </x-ui.button>
 
                             @else
-                            <x-ui.button variant="subtle" disabled>
-                                Status: {{ $course['status'] }}
+                            <x-ui.button variant="subtle" size="sm" disabled>
+                                {{ $status }}
                             </x-ui.button>
                             @endif
                         </div>
@@ -189,47 +185,29 @@
                 </div>
             </div>
             @empty
-            <div id="no-courses-placeholder" class="text-center text-gray-500 py-10">
-                <i data-lucide="folder-search" class="w-12 h-12 mx-auto mb-4"></i>
+            <div class="text-center text-gray-500 py-10">
+                <i data-lucide="folder-search" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
                 <p class="font-medium">Tidak ada kursus</p>
                 <p class="text-sm">Saat ini tidak ada kursus yang ditugaskan untuk Anda.</p>
             </div>
             @endforelse
+
+            {{-- Empty state for filter --}}
+            <div x-show="filteredCount === 0 && totalCourses > 0" x-cloak
+                class="text-center text-gray-500 py-10 transition-all duration-300">
+                <i data-lucide="filter-x" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
+                <p class="font-medium">Tidak ada kursus ditemukan</p>
+                <p class="text-sm">Tidak ada kursus dengan status "<span x-text="activeFilter"></span>".</p>
+                <button @click="setFilter('All')" class="mt-4 text-brand hover:underline text-sm font-medium">
+                    Tampilkan Semua
+                </button>
+            </div>
         </div>
     </div>
 </section>
 
 @push('styles')
 <style>
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.25rem 0.6rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        border-radius: 9999px;
-    }
-
-    .badge-completed {
-        background-color: #d1fae5;
-        color: #059669;
-    }
-
-    .badge-in-progress {
-        background-color: #fefce8;
-        color: #d97706;
-    }
-
-    .badge-not-started {
-        background-color: #e5e7eb;
-        color: #4b5563;
-    }
-
-    .badge-expired {
-        background-color: #fee2e2;
-        color: #dc2626;
-    }
-
     .scrollbar-hide::-webkit-scrollbar {
         display: none;
     }
@@ -238,69 +216,52 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
+
+    [x-cloak] {
+        display: none !important;
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-    const courseListContainer = document.getElementById('course-list-container');
-    const filterButtonsContainer = document.getElementById('filter-buttons');
-    const filterStatusEl = document.getElementById('filter-status');
-    const noCoursesPlaceholder = document.getElementById('no-courses-placeholder');
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('courseFilter', () => ({
+            activeFilter: 'All',
+            totalCourses: {{ count($courses) }},
+            
+            init() {
+                // Re-initialize icons when filter changes or DOM updates
+                this.$watch('activeFilter', () => {
+                    this.$nextTick(() => {
+                        if (window.lucide) window.lucide.createIcons();
+                    });
+                });
+            },
 
-    function filterCourses(event, filter='All'){
-        if(event) event.preventDefault();
-        if(filterStatusEl) filterStatusEl.textContent = filter;
+            setFilter(filter) {
+                this.activeFilter = filter;
+            },
 
-        if(filterButtonsContainer) {
-            filterButtonsContainer.querySelectorAll('button.filter-btn').forEach(btn => {
-                if (btn.dataset.filter === filter) {
-                    btn.classList.add('bg-brand', 'text-white', 'shadow-md');
-                    btn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-soft', 'border', 'border-gray-200');
-                } else {
-                    btn.classList.remove('bg-brand', 'text-white', 'shadow-md');
-                    btn.classList.add('bg-white', 'text-gray-700', 'hover:bg-soft', 'border', 'border-gray-200');
-                }
-            });
-        }
+            shouldShow(status) {
+                if (this.activeFilter === 'All') return true;
+                return status === this.activeFilter;
+            },
 
-        let hasResults = false;
-        if(courseListContainer) {
-            const cards = courseListContainer.querySelectorAll('.course-card');
-            cards.forEach(card => {
-                const status = card.dataset.status;
-                if (filter === 'All' || status === filter) {
-                    card.style.display = 'flex';
-                    hasResults = true;
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        }
+            get filteredCount() {
+                if (this.activeFilter === 'All') return this.totalCourses;
+                // Note: This is a simplified count. For exact count in JS, we'd need to pass the data array to Alpine.
+                // But since we are using x-show on DOM elements, we can count visible elements if needed.
+                // For simplicity and performance, we can use a query selector count.
+                const cards = document.querySelectorAll('.course-card'); // Assuming we add this class back or use a specific selector
+                // Actually, let's pass the courses data status to Alpine for accurate counting without DOM query spam
+                // Or simpler: query the DOM for visible elements matching the status?
+                // Let's do the robust way: pass simplified data to Alpine.
+                return this.coursesData.filter(c => this.activeFilter === 'All' || c.status === this.activeFilter).length;
+            },
 
-        let noResultEl = courseListContainer ? courseListContainer.querySelector('.no-results-placeholder') : null;
-        if (!hasResults && courseListContainer) {
-            if (!noResultEl) {
-                noResultEl = document.createElement('div');
-                noResultEl.className = 'no-results-placeholder text-center text-gray-500 py-10';
-                courseListContainer.appendChild(noResultEl);
-            }
-            noResultEl.innerHTML = `
-                <i data-lucide="folder-search" class="w-12 h-12 mx-auto mb-4"></i>
-                <p class="font-medium">Tidak ada kursus</p>
-                <p class="text-sm">Tidak ada kursus yang ditemukan untuk filter "${filter}".</p>`;
-            if (window.lucide) window.lucide.createIcons();
-        } else if (noResultEl) {
-            noResultEl.remove();
-        }
-
-        if (noCoursesPlaceholder) {
-            noCoursesPlaceholder.style.display = (hasResults || filter !== 'All') ? 'none' : 'block';
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        filterCourses(null, 'All');
+            coursesData: @json(collect($courses)->map(fn($c) => ['status' => $c['status'] ?? 'Not Started']))
+        }));
     });
 </script>
 @endpush

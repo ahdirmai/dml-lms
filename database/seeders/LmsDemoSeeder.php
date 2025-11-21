@@ -2,17 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Models\Lms\Category;
+use App\Models\Lms\Course;
+use App\Models\Lms\Lesson;
+use App\Models\Lms\Module;
+use App\Models\Lms\Quiz;
+use App\Models\Lms\QuizOption;
+use App\Models\Lms\QuizQuestion;
+use App\Models\Lms\Tag;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
-use App\Models\User;
-use App\Models\Lms\Category;
-use App\Models\Lms\Tag;
-use App\Models\Lms\Course;
-use App\Models\Lms\Module;
-use App\Models\Lms\Lesson;
-use App\Models\Lms\Quiz;
-use App\Models\Lms\QuizQuestion;
-use App\Models\Lms\QuizOption;
 
 class LmsDemoSeeder extends Seeder
 {
@@ -57,7 +57,7 @@ class LmsDemoSeeder extends Seeder
                 'has_pretest' => true,
                 'has_posttest' => true,
                 'default_passing_score' => 70,
-                'pretest_passing_score' => 0,
+                'pretest_passing_score' => 70,
                 'posttest_passing_score' => 80,
                 'require_pretest_before_content' => true,
             ]
@@ -118,7 +118,7 @@ class LmsDemoSeeder extends Seeder
             'time_limit_seconds' => 300,
             'shuffle_questions' => true,
             'shuffle_options' => true,
-            'passing_score' => null, // gunakan pretest_passing_score = 0
+            'passing_score' => 70, // gunakan pretest_passing_score = 0
         ]);
 
         // Posttest (polymorphic ke Course)
@@ -135,17 +135,17 @@ class LmsDemoSeeder extends Seeder
         ]);
 
         // Quiz untuk lesson (polymorphic ke Lesson)
-        $lessonQuiz = $lesson2->quiz()->first() ?? Quiz::create([
-            'id' => (string) Str::uuid(),
-            'title' => 'Quiz: Routing Dasar',
-            'quiz_kind' => 'regular',
-            'quizzable_type' => Lesson::class,
-            'quizzable_id' => $lesson2->id,
-            'time_limit_seconds' => 300,
-            'shuffle_questions' => true,
-            'shuffle_options' => true,
-            'passing_score' => 70,
-        ]);
+        // $lessonQuiz = $lesson2->quiz()->first() ?? Quiz::create([
+        //     'id' => (string) Str::uuid(),
+        //     'title' => 'Quiz: Routing Dasar',
+        //     'quiz_kind' => 'regular',
+        //     'quizzable_type' => Lesson::class,
+        //     'quizzable_id' => $lesson2->id,
+        //     'time_limit_seconds' => 300,
+        //     'shuffle_questions' => true,
+        //     'shuffle_options' => true,
+        //     'passing_score' => 70,
+        // ]);
 
         // ===== QUESTIONS & OPTIONS =====
         $this->seedQuestions($pretest, [
@@ -173,7 +173,6 @@ class LmsDemoSeeder extends Seeder
                 ['php artisan new:controller', false],
             ]],
         ]);
-
 
         $this->command->info('✅ LmsDemoSeeder selesai: 1 course + 1 module + 2 lesson + pretest/posttest/quiz terbuat.');
     }

@@ -3,8 +3,8 @@
 namespace App\Models\Lms;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 class Course extends Model
 {
@@ -41,6 +41,7 @@ class Course extends Model
     ];
 
     public $incrementing = false;
+
     protected $keyType = 'string';
 
     // ... (relasi yang ada: modules, lessons, categories, tags, instructor) ...
@@ -49,18 +50,22 @@ class Course extends Model
     {
         return $this->hasMany(Module::class)->orderBy('order'); // Tambahkan orderBy
     }
+
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
     }
+
     public function categories()
     {
         return $this->belongsToMany(Category::class, 'category_courses');
     }
+
     public function tags()
     {
         return $this->belongsToMany(Tag::class, 'course_tags');
     }
+
     public function instructor()
     {
         return $this->belongsTo(User::class, 'instructor_id', 'id');
@@ -71,6 +76,7 @@ class Course extends Model
     {
         return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'pretest');
     }
+
     public function posttest()
     {
         return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'posttest');

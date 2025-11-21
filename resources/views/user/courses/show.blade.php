@@ -137,6 +137,7 @@
                     'ctaLabel' => $ctaLabel,
                     'totalModules' => $totalModules,
                     'pretestGateActive'=> $pretestGateActive,
+                    'requirePretest' => $course->require_pretest_before_content,
 
                     // tambahan untuk tombol test di samping CTA
                     'courseId' => $courseId,
@@ -204,6 +205,8 @@
                 'hasPostTest' => (bool) $course->posttest,
                 'preDone' => !empty($pretestResult),
                 'postDone' => !empty($posttestResult),
+                'preScore' => $pretestResult['score'] ?? 0,
+                'postScore' => $posttestResult['score'] ?? 0,
                 'canReview' => !empty($posttestResult),
                 ])
             </div>

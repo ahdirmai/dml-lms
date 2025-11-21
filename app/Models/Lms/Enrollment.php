@@ -12,7 +12,7 @@ class Enrollment extends Model
         'course_id',
         'status',
         'enrolled_at',
-        'completed_at'
+        'completed_at',
     ];
 
     // Tambahkan cast untuk tanggal
@@ -25,6 +25,7 @@ class Enrollment extends Model
     {
         return $this->belongsTo(User::class);
     }
+
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
@@ -48,30 +49,27 @@ class Enrollment extends Model
      * TAMBAHAN: Relasi untuk mendapatkan attempt Pre-test TERAKHIR
      * dari user ini untuk course ini.
      */
-    public function latestPretestAttempt()
+    public function getLatestPretestAttemptAttribute()
     {
-        return $this->hasOne(QuizAttempt::class, 'user_id', 'user_id')
-            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
-            ->where('quizzes.quizzable_type', Course::class)
-            // Gunakan $this->course_id untuk memastikan join ke course yang benar
-            ->where('quizzes.quizzable_id', $this->course_id)
-            ->where('quizzes.quiz_kind', Quiz::KIND_PRETEST)
-            ->select('quiz_attempts.*') // Hindari konflik kolom 'id'
-            ->latest('quiz_attempts.created_at'); // Ambil yang terbaru
+        $pretest_id = $this->course->pretest->id;
+
+        return QuizAttempt::where('user_id', $this->user_id)
+            ->where('quiz_id', $pretest_id)
+            ->orderByDesc('created_at')
+            ->first();
     }
 
     /**
      * TAMBAHAN: Relasi untuk mendapatkan attempt Post-test TERAKHIR
      * dari user ini untuk course ini.
      */
-    public function latestPosttestAttempt()
+    public function getLatestPosttestAttemptAttribute()
     {
-        return $this->hasOne(QuizAttempt::class, 'user_id', 'user_id')
-            ->join('quizzes', 'quiz_attempts.quiz_id', '=', 'quizzes.id')
-            ->where('quizzes.quizzable_type', Course::class)
-            ->where('quizzes.quizzable_id', $this->course_id)
-            ->where('quizzes.quiz_kind', Quiz::KIND_POSTTEST)
-            ->select('quiz_attempts.*')
-            ->latest('quiz_attempts.created_at');
+        $posttest_id = $this->course->posttest->id;
+
+        return QuizAttempt::where('user_id', $this->user_id)
+            ->where('quiz_id', $posttest_id)
+            ->orderByDesc('created_at')
+            ->first();
     }
 }
