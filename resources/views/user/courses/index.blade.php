@@ -243,7 +243,8 @@
 
                                 @elseif($status === 'completed')
                                     @if($hasReviewUrl)
-                                        <x-ui.button variant="secondary" size="sm" onclick="window.TestFlow?.openReview('{{ $courseId }}')" class="w-full justify-center">
+                                        <x-ui.button variant="primary" size="sm" onclick="window.TestFlow?.openReview('{{ $courseId }}')" class="w-full justify-center group">
+                                            <i data-lucide="star" class="w-3.5 h-3.5 mr-1 group-hover:scale-110 transition-transform"></i>
                                             Review Kursus
                                         </x-ui.button>
                                     @else

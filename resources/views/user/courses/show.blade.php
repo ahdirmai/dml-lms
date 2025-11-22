@@ -36,7 +36,14 @@
     ? route('user.lessons.show', $modules[0]['lessons'][0]['id'])
     : '#');
 
-    $ctaLabel = $lastLessonId ? 'Lanjutkan Pelajaran Terakhir' : 'Mulai Belajar';
+    // CTA label yang lebih friendly
+    if ($pct >= 100) {
+        $ctaLabel = 'Lihat Materi Kursus';
+    } elseif ($lastLessonId) {
+        $ctaLabel = 'Lanjutkan Pelajaran Terakhir';
+    } else {
+        $ctaLabel = 'Mulai Belajar';
+    }
 
     // Dummy meta
     $ratingText = '⭐ 4.9 (1.2k review)';

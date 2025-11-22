@@ -86,14 +86,14 @@
             </button>
             @endif
 
-            @if($canReview && $postDone)
+            @if($canReview)
             <button type="button" onclick="window.TestFlow?.openReview('{{ $courseId }}')"
-                class="inline-flex items-center px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700 font-semibold hover:bg-amber-100">
-                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                class="inline-flex items-center px-3 py-1.5 rounded-full border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 font-semibold hover:from-amber-100 hover:to-yellow-100 shadow-sm hover:shadow-md transition-all group {{ $pct >= 100 ? 'animate-pulse' : '' }}">
+                <svg class="w-3.5 h-3.5 mr-1 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.286 3.967a1 1 0 00.95.69h4.178c.969 0 1.371 1.24.588 1.81l-3.383 2.46a1 1 0 00-.364 1.118l1.287 3.966c.3.922-.755 1.688-1.54 1.118l-3.383-2.46a1 1 0 00-1.175 0l-3.383 2.46c-.784.57-1.838-.196-1.539-1.118l1.287-3.966a1 1 0 00-.364-1.118L2.998 9.394c-.783-.57-.38-1.81.588-1.81h4.178a1 1 0 00.95-.69l1.286-3.967z" />
                 </svg>
-                Review
+                Review Kursus
             </button>
             @endif
             @endif
