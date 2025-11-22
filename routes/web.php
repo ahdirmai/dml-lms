@@ -1,40 +1,37 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Artisan;
-
-// Public Controllers
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\RoleSwitchController;
-
-// Admin Controllers
-use App\Http\Controllers\Admin\UsersController;
-use App\Http\Controllers\Admin\RolesController;
-use App\Http\Controllers\Admin\PermissionsController;
 use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\TagController;
-use App\Http\Controllers\Admin\CourseController as AdminCourseController;
-use App\Http\Controllers\Admin\ModuleController as AdminModuleController;
-use App\Http\Controllers\Admin\LessonController as AdminLessonController;
-use App\Http\Controllers\Admin\QuizController as AdminQuizController;
 use App\Http\Controllers\Admin\CourseAssignController as AdminCourseAssignController;
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+// Public Controllers
 use App\Http\Controllers\Admin\CourseProgressController as AdminCourseProgressController;
-use App\Http\Controllers\Admin\IntegrationController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+// Admin Controllers
+use App\Http\Controllers\Admin\LessonController as AdminLessonController;
+use App\Http\Controllers\Admin\ModuleController as AdminModuleController;
+use App\Http\Controllers\Admin\PermissionsController;
+use App\Http\Controllers\Admin\QuizController as AdminQuizController;
+use App\Http\Controllers\Admin\RolesController;
+use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserIntegrationController;
+use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Auth\SsoLoginController;
-// Instructor Controllers
 use App\Http\Controllers\Instructor\CourseAssignController as InstructorCourseAssignController;
 use App\Http\Controllers\Instructor\CourseController as InstructorCourseController;
 use App\Http\Controllers\Instructor\CourseProgressController as InstructorCourseProgressController;
 use App\Http\Controllers\Instructor\LessonController as InstructorLessonController;
 use App\Http\Controllers\Instructor\ModuleController as InstructorModuleController;
+// Instructor Controllers
 use App\Http\Controllers\Instructor\QuizController as InstructorQuizController;
-
-// User Controllers
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RoleSwitchController;
 use App\Http\Controllers\User\CourseController as UserCourseController;
 use App\Http\Controllers\User\DashboardController as UserDashboardController;
 use App\Http\Controllers\User\LessonController as UserLessonController;
+// User Controllers
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,25 +42,23 @@ use App\Http\Controllers\User\LessonController as UserLessonController;
 Route::get('/', function () {
     $user = Auth::user();
 
-    if (!$user) {
+    if (! $user) {
         return redirect()->route('login');
     }
 
     $activeRole = $user->active_role ?? $user->getRoleNames()->first();
 
     return match ($activeRole) {
-        'admin'      => redirect()->route('admin.dashboard'),
+        'admin' => redirect()->route('admin.dashboard'),
         'instructor' => redirect()->route('instructor.dashboard'),
-        'student'    => redirect()->route('user.dashboard'),
-        default      => redirect()->route('dashboard'),
+        'student' => redirect()->route('user.dashboard'),
+        default => redirect()->route('dashboard'),
     };
 });
-
 
 Route::match(['GET', 'POST'], '/sso/login', SsoLoginController::class)
     ->name('sso.login')
     ->middleware('web');
-
 
 /*
 |--------------------------------------------------------------------------
@@ -97,7 +92,7 @@ Route::name('user.')
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
@@ -113,7 +108,7 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'role.active:admin'])
     ->group(function () {
-        Route::get('/dashboard', fn() => view('dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
         // RBAC
         Route::resource('users', UsersController::class)->except(['show']);
@@ -164,16 +159,15 @@ Route::prefix('admin')
         Route::post('modules/{module}/lessons/reorder', [AdminLessonController::class, 'reorder'])->name('lessons.reorder');
 
         // === Pre/Posttest Store (views-only stage; controller bisa diisi nanti) ===
-        Route::post('courses/{course}/pretest',  [AdminQuizController::class, 'storePretest'])->name('courses.pretest.store');
+        Route::post('courses/{course}/pretest', [AdminQuizController::class, 'storePretest'])->name('courses.pretest.store');
         Route::post('courses/{course}/posttest', [AdminQuizController::class, 'storePosttest'])->name('courses.posttest.store');
         // Quizzes
 
         Route::prefix('quizzes/{quiz}')->group(function () {
-            Route::post('questions',                             [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
-            Route::put('questions/{question}',                 [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
-            Route::delete('questions/{question}',                [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
-            Route::post('questions/reorder',                     [AdminQuizController::class, 'reorderQuestions'])->name('quizzes.questions.reorder'); // optional
-
+            Route::post('questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+            Route::put('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+            Route::delete('questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+            Route::post('questions/reorder', [AdminQuizController::class, 'reorderQuestions'])->name('quizzes.questions.reorder'); // optional
 
         });
 
@@ -208,7 +202,7 @@ Route::prefix('instructor')
     ->name('instructor.')
     ->middleware(['auth', 'role.active:instructor'])
     ->group(function () {
-        Route::get('/dashboard', fn() => view('dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+        Route::get('/dashboard', fn () => view('dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
 
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('tags', TagController::class)->except(['show']);
@@ -263,7 +257,8 @@ Route::get('/_util/cache', function () {
     Artisan::call('config:cache');
     Artisan::call('view:cache');
     Artisan::call('event:cache');
+
     return 'OK';
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
