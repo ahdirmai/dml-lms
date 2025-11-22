@@ -87,6 +87,29 @@ class CourseController extends Controller
 
         $data = $this->userCourseService->formatCourseDetails($enrollment);
 
+        // Check Due Date Access
+        $course = $enrollment->course;
+        $isAccessBlocked = false;
+        $accessMessage = null;
+
+        if ($course->using_due_date) {
+            $dueDate = $enrollment->dueDate;
+            $now = now();
+
+            if ($dueDate) {
+                if ($dueDate->start_date && $now->lt($dueDate->start_date)) {
+                    $isAccessBlocked = true;
+                    $accessMessage = 'Kursus belum dimulai. Akses dibuka pada ' . \Carbon\Carbon::parse($dueDate->start_date)->format('d M Y');
+                } elseif ($dueDate->end_date && $now->gt($dueDate->end_date)) {
+                    $isAccessBlocked = true;
+                    $accessMessage = 'Masa akses kursus telah berakhir pada ' . \Carbon\Carbon::parse($dueDate->end_date)->format('d M Y');
+                }
+            }
+        }
+
+        $data['isAccessBlocked'] = $isAccessBlocked;
+        $data['accessMessage'] = $accessMessage;
+
         return view('user.courses.show', $data);
     }
 

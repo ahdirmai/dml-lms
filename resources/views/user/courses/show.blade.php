@@ -153,6 +153,10 @@
                     'preDone' => $preDone,
                     'postDone' => $postDone,
                     'canReview' => $canReview,
+
+                    // Access Control
+                    'isAccessBlocked' => $isAccessBlocked ?? false,
+                    'accessMessage' => $accessMessage ?? null,
                     ])
 
                     {{-- Banner info kalau pretest gate aktif --}}
@@ -182,6 +186,7 @@
                     @include('user.courses.partials.curriculum', [
                     'modules' => $modules,
                     'pretestGateActive' => $pretestGateActive,
+                    'isAccessBlocked' => $isAccessBlocked ?? false,
                     ])
 
                     {{-- Pretest & Posttest --}}
@@ -215,6 +220,10 @@
                 'preScore' => $pretestResult['score'] ?? 0,
                 'postScore' => $posttestResult['score'] ?? 0,
                 'canReview' => !empty($posttestResult),
+
+                // Access Control
+                'isAccessBlocked' => $isAccessBlocked ?? false,
+                'accessMessage' => $accessMessage ?? null,
                 ])
             </div>
         </div>

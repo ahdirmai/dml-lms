@@ -27,6 +27,8 @@
 'preScore' => 0,
 'postScore' => 0,
 'canReview' => false,
+'isAccessBlocked' => false,
+'accessMessage' => null,
 ])
 
 <aside class="lg:sticky lg:top-20 space-y-4">
@@ -60,15 +62,21 @@
         </div>
 
         @php
-        $ctaDisabled = $course->require_pretest_before_content && $pretestGateActive;
+        $ctaDisabled = ($course->require_pretest_before_content && $pretestGateActive) || $isAccessBlocked;
+        $ctaTitle = '';
+        if ($isAccessBlocked) {
+            $ctaTitle = $accessMessage;
+        } elseif ($ctaDisabled) {
+            $ctaTitle = "Selesaikan pre-test untuk membuka materi.";
+        }
         @endphp
 
-        {{-- CTA utama (disable kalau pretest belum tercapai) --}}
+        {{-- CTA utama (disable kalau pretest belum tercapai atau akses diblokir) --}}
         <a @if($ctaDisabled) href="javascript:void(0)" @else href="{{ $ctaHref }}" @endif class="w-full inline-flex items-center justify-center font-semibold py-2.5 rounded-xl text-sm transition shadow
                    {{ $ctaDisabled
                         ? 'bg-gray-300 text-gray-600 cursor-not-allowed pointer-events-none'
                         : 'bg-brand hover:brightness-95 text-white' }}" @if($ctaDisabled)
-            title="Selesaikan pre-test untuk membuka materi." @endif>
+            title="{{ $ctaTitle }}" @endif>
             {{ $ctaLabel }}
         </a>
 
@@ -176,6 +184,12 @@
                 <span class="font-medium text-gray-800">
                     {{ \Carbon\Carbon::parse($valid)->format('d M Y') }}
                 </span>
+            </p>
+            @endif
+
+            @if($isAccessBlocked)
+            <p class="text-rose-600 font-semibold mt-2">
+                {{ $accessMessage }}
             </p>
             @endif
         </div>

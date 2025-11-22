@@ -2,6 +2,7 @@
 @props([
 'modules' => [],
 'pretestGateActive' => false,
+'isAccessBlocked' => false,
 ])
 
 <section class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-5 sm:p-6">
@@ -55,6 +56,11 @@
                     @php
                     $isDone = $ls['is_done'] ?? false;
                     $isLocked = $ls['is_locked'] ?? false;
+
+                    if ($isAccessBlocked) {
+                        $isLocked = true;
+                    }
+
                     $type = $ls['type'] ?? 'video';
                     $icon = $type === 'quiz' ? '❓' : '▶';
                     @endphp

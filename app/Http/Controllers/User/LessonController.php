@@ -36,7 +36,24 @@ class LessonController extends Controller
         // Otorisasi: Gagal (403) jika user tidak terdaftar
         $enrollment = $user->enrollments()
             ->where('course_id', $course->id)
+            ->with('dueDate')
             ->firstOrFail();
+
+        // Check Due Date Access
+        if ($course->using_due_date) {
+            $dueDate = $enrollment->dueDate;
+            $now = now();
+
+            if ($dueDate) {
+                if ($dueDate->start_date && $now->lt($dueDate->start_date)) {
+                    return redirect()->route('user.courses.show', $course->id)
+                        ->with('error', 'Kursus belum dimulai. Akses dibuka pada ' . \Carbon\Carbon::parse($dueDate->start_date)->format('d M Y'));
+                } elseif ($dueDate->end_date && $now->gt($dueDate->end_date)) {
+                    return redirect()->route('user.courses.show', $course->id)
+                        ->with('error', 'Masa akses kursus telah berakhir pada ' . \Carbon\Carbon::parse($dueDate->end_date)->format('d M Y'));
+                }
+            }
+        }
 
         // 2. Siapkan Data Sidebar (Modul & Progres)
         $completedLessonIds = LessonProgress::where('enrollment_id', $enrollment->id)

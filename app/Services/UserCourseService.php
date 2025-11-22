@@ -368,6 +368,7 @@ class UserCourseService
                     'posttest.questions.options',
                 ])->withSum('lessons', 'duration_seconds'),
                 'lessonProgress',
+                'dueDate',
                 // 'latestPretestAttempt', // Removed: Accessor, not a relation
                 // 'latestPosttestAttempt', // Removed: Accessor, not a relation
             ])

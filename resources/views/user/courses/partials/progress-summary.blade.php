@@ -16,7 +16,9 @@
 'hasPostTest' => false,
 'preDone' => false,
 'postDone' => false,
-'canReview' => false,
+    'canReview' => false,
+    'isAccessBlocked' => false,
+    'accessMessage' => null,
 ])
 
 <section class="bg-white rounded-2xl shadow-custom-soft border border-gray-100 p-5 sm:p-6">
@@ -52,7 +54,7 @@
     <div class="mt-4 flex flex-col sm:flex-row sm:items-center gap-2">
         {{-- Tombol utama belajar --}}
         @php
-            $ctaDisabled = $requirePretest && $pretestGateActive;
+            $ctaDisabled = ($requirePretest && $pretestGateActive) || $isAccessBlocked;
         @endphp
         <a href="{{ $ctaDisabled ? '#' : $ctaHref }}" class="inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-sm font-semibold text-white shadow
                   {{ $ctaDisabled ? 'bg-gray-400 cursor-not-allowed pointer-events-none'
@@ -101,7 +103,12 @@
     </div>
 
     <p class="mt-2 text-[11px] text-gray-500">
-        Sistem akan mengingat pelajaran terakhir yang Anda buka.
+        @if($isAccessBlocked)
+             <span class="text-rose-600 font-semibold block mb-1">{{ $accessMessage }}</span>
+        @else
+             Sistem akan mengingat pelajaran terakhir yang Anda buka.
+        @endif
+
         @if($pretestGateActive)
         <span class="text-amber-600 font-semibold"> Pre-test wajib diselesaikan sebelum materi dapat diakses.</span>
         @endif
