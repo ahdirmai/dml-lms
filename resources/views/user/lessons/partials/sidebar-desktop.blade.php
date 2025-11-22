@@ -22,27 +22,46 @@
                         @php
                         $isActive = ($lesson->id ?? null) === ($ls['id'] ?? null);
                         $isDone = $ls['is_done'] ?? false;
+                        $isAccessible = $ls['is_accessible'] ?? true;
                         $type = $ls['kind'] ?? 'youtube';
                         @endphp
                         <li>
-                            <a href="{{ route('user.lessons.show', $ls['id']) }}"
-                                class="flex items-center gap-3 px-3.5 py-2.5 text-[13px] {{ $isActive ? 'bg-brand/8 text-brand font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
-                                @if($type === 'quiz')
-                                <span title="Quiz"
-                                    class="inline-flex items-center justify-center w-6 h-6 text-xs rounded-full border {{ $isActive ? 'border-brand text-brand bg-white' : 'border-gray-300 text-gray-400 bg-white' }}">?</span>
-                                @else
-                                <span
-                                    class="inline-flex items-center justify-center w-6 h-6 text-[11px] rounded-full border {{ $isActive ? 'border-brand text-brand bg-white' : 'border-gray-300 text-gray-400 bg-white' }}">▶</span>
-                                @endif
-                                <span class="flex-1 line-clamp-2">{{ $ls['title'] ?? 'Pelajaran' }}</span>
-                                @if($isDone)
-                                <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor"
-                                    viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M5 13l4 4L19 7" />
-                                </svg>
-                                @endif
-                            </a>
+                            @if($isAccessible)
+                                <a href="{{ route('user.lessons.show', $ls['id']) }}"
+                                    class="flex items-center gap-3 px-3.5 py-2.5 text-[13px] {{ $isActive ? 'bg-brand/8 text-brand font-semibold' : 'text-gray-700 hover:bg-gray-50' }}">
+                                    @if($type === 'quiz')
+                                    <span title="Quiz"
+                                        class="inline-flex items-center justify-center w-6 h-6 text-xs rounded-full border {{ $isActive ? 'border-brand text-brand bg-white' : 'border-gray-300 text-gray-400 bg-white' }}">?</span>
+                                    @else
+                                    <span
+                                        class="inline-flex items-center justify-center w-6 h-6 text-[11px] rounded-full border {{ $isActive ? 'border-brand text-brand bg-white' : 'border-gray-300 text-gray-400 bg-white' }}">▶</span>
+                                    @endif
+                                    <span class="flex-1 line-clamp-2">{{ $ls['title'] ?? 'Pelajaran' }}</span>
+                                    @if($isDone)
+                                    <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    @endif
+                                </a>
+                            @else
+                                <div class="flex items-center gap-3 px-3.5 py-2.5 text-[13px] text-gray-400 cursor-not-allowed opacity-60"
+                                    data-lesson-id="{{ $ls['id'] }}"
+                                    title="Selesaikan pelajaran sebelumnya terlebih dahulu">
+                                    @if($type === 'quiz')
+                                    <span title="Quiz"
+                                        class="inline-flex items-center justify-center w-6 h-6 text-xs rounded-full border border-gray-300 text-gray-400 bg-white">?</span>
+                                    @else
+                                    <span
+                                        class="inline-flex items-center justify-center w-6 h-6 text-[11px] rounded-full border border-gray-300 text-gray-400 bg-white">▶</span>
+                                    @endif
+                                    <span class="flex-1 line-clamp-2">{{ $ls['title'] ?? 'Pelajaran' }}</span>
+                                    <svg class="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    </svg>
+                                </div>
+                            @endif
                         </li>
                         @endforeach
                     </ul>

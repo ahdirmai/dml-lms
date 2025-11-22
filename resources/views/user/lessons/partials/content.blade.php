@@ -43,6 +43,31 @@
         <div class="flex flex-wrap gap-2 mt-1">
             {{-- resource tambahan --}}
         </div>
+
+        {{-- Time Counter --}}
+        <div class="mt-4 flex items-center gap-2 text-sm text-gray-600">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Waktu: <strong id="time-counter">00:00</strong></span>
+        </div>
+
+        {{-- Tombol Tandai Selesai (Hidden by default, or if already completed) --}}
+        @if(!$currentProgress || $currentProgress->status !== 'completed')
+        <div id="completion-area" class="mt-4 hidden">
+            <form action="{{ route('user.lessons.complete', $lesson->id) }}" method="post">
+                @csrf
+                <button type="submit" id="btn-mark-complete"
+                    class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand hover:brightness-95 text-white text-sm font-semibold transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+                    Tandai Telah Selesai
+                </button>
+            </form>
+        </div>
+        @else
+        <div class="mt-4 flex items-center gap-2 text-sm text-emerald-600 font-semibold">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle-2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>Pelajaran Telah Selesai</span>
+        </div>
+        @endif
     </div>
 </article>
 
@@ -62,14 +87,28 @@
         @endif
     </div>
 
-    <div class="mt-5 flex flex-wrap gap-2">
-        <form action="#" method="post">@csrf
-            <button type="submit"
+    {{-- Time Counter --}}
+    <div class="mt-4 flex items-center gap-2 text-sm text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clock"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span>Waktu: <strong id="time-counter-text">00:00</strong></span>
+    </div>
+
+    @if(!$currentProgress || $currentProgress->status !== 'completed')
+    <div id="completion-area-text" class="mt-5 flex flex-wrap gap-2 hidden">
+        <form action="{{ route('user.lessons.complete', $lesson->id) }}" method="post">@csrf
+            <button type="submit" id="btn-mark-complete-text"
                 class="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-accent hover:brightness-95 text-white text-sm font-semibold">
-                Tandai Selesai
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+                Tandai Telah Selesai
             </button>
         </form>
     </div>
+    @else
+    <div class="mt-5 flex items-center gap-2 text-sm text-emerald-600 font-semibold">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle-2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        <span>Pelajaran Telah Selesai</span>
+    </div>
+    @endif
 </article>
 
 @elseif($lesson->kind === 'quiz')

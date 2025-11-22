@@ -180,11 +180,13 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
                 'youtubeWatchUrl' => $youtubeWatchUrl,
                 'youtubeThumb' => $youtubeThumb,
                 'gdriveEmbedSrc' => $gdriveEmbedSrc,
+                'currentProgress' => $currentProgress,
                 ])
 
                 @include('user.lessons.partials.prev-next', [
                 'prev' => $prev,
                 'next' => $next,
+                'isCompleted' => $currentProgress && $currentProgress->status === 'completed',
                 ])
             </main>
         </div>
@@ -269,5 +271,295 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
             clearTimeout(t);
         });
     })();
+
+    // --- Lesson Progress & Completion Logic ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const lessonId = "{{ $lesson->id }}";
+        const lessonDuration = {{ $lesson->duration_seconds ?? 0 }};
+        const isVideo = {{ ($lesson->kind === 'video' || $lesson->youtube_video_id) ? 'true' : 'false' }};
+        const isYoutube = {{ $lesson->youtube_video_id ? 'true' : 'false' }};
+        
+        // Initial values from server
+        let serverSpent = {{ $currentProgress->duration_seconds ?? 0 }};
+        let lastWatched = {{ $currentProgress->last_watched_second ?? 0 }};
+        
+        let sessionSpent = 0; // Seconds spent in this session
+        let lastSyncedSessionSpent = 0; // Track what we've already sent
+        let currentVideoTime = lastWatched; // For video tracking
+        let isVideoPlaying = false; // Track video state
+        
+        const completionArea = document.getElementById('completion-area') || document.getElementById('completion-area-text');
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const timeCounterEl = document.getElementById('time-counter') || document.getElementById('time-counter-text');
+
+        // Helper: Format seconds to MM:SS
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // Update time display (countdown)
+        function updateTimeDisplay() {
+            if (timeCounterEl) {
+                const unsynced = sessionSpent - lastSyncedSessionSpent;
+                const totalSpent = serverSpent + unsynced;
+                const remaining = Math.max(0, lessonDuration - totalSpent);
+                timeCounterEl.textContent = formatTime(remaining);
+            }
+        }
+
+        // Initialize display
+        updateTimeDisplay();
+
+        // 1. Timer for Time Spent (every 1s)
+        // Always count page time, regardless of video play state
+        setInterval(() => {
+            sessionSpent++;
+            updateTimeDisplay();
+            checkCompletion();
+            
+            // Auto-submit when timer reaches zero
+            const unsynced = sessionSpent - lastSyncedSessionSpent;
+            const totalSpent = serverSpent + unsynced;
+            const remaining = Math.max(0, lessonDuration - totalSpent);
+            
+            if (remaining === 0 && !document.querySelector('.completion-success')) {
+                // Timer has ended, auto-submit
+                submitCompletion();
+            }
+        }, 1000);
+
+        // 2. Sync to Server (every 10s)
+        setInterval(() => {
+            syncProgress();
+        }, 10000);
+
+        // 3. Check Completion Visibility
+        function checkCompletion() {
+            if (!completionArea) return;
+            if (completionArea.classList.contains('hidden') === false) return; // Already shown
+
+            const unsynced = sessionSpent - lastSyncedSessionSpent;
+            const totalSpent = serverSpent + unsynced;
+            
+            let show = false;
+
+            if (isVideo) {
+                // Video: Time Spent >= Duration - 30s OR Video Position >= Duration - 30s
+                const threshold = Math.max(0, lessonDuration - 30);
+                if (totalSpent >= threshold || currentVideoTime >= threshold) {
+                    show = true;
+                }
+            } else {
+                // GDrive/Text: Time Spent >= Duration - 60s
+                const threshold = Math.max(0, lessonDuration - 60);
+                if (totalSpent >= threshold) {
+                    show = true;
+                }
+            }
+
+            if (show) {
+                completionArea.classList.remove('hidden');
+            }
+        }
+
+        // 5. Submit Completion (AJAX)
+        function submitCompletion() {
+            // Prevent multiple submissions
+            if (window.submittingCompletion) return;
+            window.submittingCompletion = true;
+
+            fetch("{{ route('user.lessons.complete', $lesson->id) }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({})
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Hide completion button, show success message
+                    if (completionArea) {
+                        completionArea.innerHTML = `
+                            <div class="flex items-center gap-2 text-sm text-emerald-600 font-semibold completion-success">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check-circle-2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                                <span>Pelajaran Telah Selesai</span>
+                            </div>
+                        `;
+                    }
+                    
+                    // Enable next lesson navigation
+                    enableNextLesson();
+                }
+            })
+            .catch(err => {
+                console.error('Completion failed', err);
+                window.submittingCompletion = false;
+            });
+        }
+
+        // 6. Enable Next Lesson Navigation
+        function enableNextLesson() {
+            // 1. Update current lesson checkmark in sidebars
+            const currentLessonLinks = document.querySelectorAll(`a[href*="${lessonId}"]`);
+            currentLessonLinks.forEach(link => {
+                // Add checkmark if not already present
+                if (!link.querySelector('svg[class*="emerald"]')) {
+                    const checkmark = document.createElement('svg');
+                    checkmark.className = 'w-4 h-4 text-emerald-600 shrink-0';
+                    checkmark.setAttribute('fill', 'none');
+                    checkmark.setAttribute('stroke', 'currentColor');
+                    checkmark.setAttribute('viewBox', '0 0 24 24');
+                    checkmark.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+                    link.appendChild(checkmark);
+                }
+            });
+
+            // 2. Find the next lesson ID
+            const allLessonLinks = Array.from(document.querySelectorAll('a[href*="/lessons/"]'));
+            const currentIndex = allLessonLinks.findIndex(link => link.href.includes(lessonId));
+            let nextLessonHref = null;
+            
+            if (currentIndex !== -1 && currentIndex < allLessonLinks.length - 1) {
+                nextLessonHref = allLessonLinks[currentIndex + 1].href;
+            }
+
+            // 3. Enable next lesson in prev-next navigation
+            const disabledNextDiv = document.querySelector('div[class*="bg-gray-300"][class*="cursor-not-allowed"]');
+            if (disabledNextDiv && nextLessonHref) {
+                const nextTitle = disabledNextDiv.querySelector('span')?.textContent;
+                const nextSvg = disabledNextDiv.querySelector('svg')?.outerHTML;
+
+                const newLink = document.createElement('a');
+                newLink.href = nextLessonHref;
+                newLink.className = 'inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-2xl bg-brand hover:brightness-95 text-white text-xs sm:text-sm font-semibold';
+                newLink.innerHTML = `<span class="line-clamp-1">${nextTitle}</span>${nextSvg}`;
+                disabledNextDiv.replaceWith(newLink);
+            }
+
+            // 4. Enable next lesson in sidebars (both desktop and offcanvas)
+            const disabledLessons = document.querySelectorAll('div[data-lesson-id][class*="cursor-not-allowed"]');
+            
+            disabledLessons.forEach(disabledDiv => {
+                const nextLessonId = disabledDiv.getAttribute('data-lesson-id');
+                
+                // Check if this is the immediate next lesson
+                if (nextLessonHref && nextLessonHref.includes(nextLessonId)) {
+                    const lessonTitle = disabledDiv.querySelector('span.line-clamp-2')?.textContent;
+                    const isQuiz = disabledDiv.querySelector('span[title="Quiz"]');
+                    
+                    // Create new active link
+                    const newLink = document.createElement('a');
+                    newLink.href = nextLessonHref;
+                    newLink.className = 'flex items-center gap-3 px-3.5 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50';
+                    
+                    const iconClass = 'inline-flex items-center justify-center w-6 h-6 text-xs rounded-full border border-gray-300 text-gray-400 bg-white';
+                    const iconContent = isQuiz ? '?' : '▶';
+                    
+                    newLink.innerHTML = `
+                        <span class="${iconClass}">${iconContent}</span>
+                        <span class="flex-1 line-clamp-2">${lessonTitle}</span>
+                    `;
+                    
+                    disabledDiv.replaceWith(newLink);
+                }
+            });
+        }
+
+        // Attach AJAX handler to completion buttons
+        const completionButtons = document.querySelectorAll('#btn-mark-complete, #btn-mark-complete-text');
+        completionButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                submitCompletion();
+            });
+        });
+
+        // 4. Sync Function
+        function syncProgress() {
+            const delta = sessionSpent - lastSyncedSessionSpent;
+            if (delta <= 0 && !isYoutube) return; // Nothing to sync if not video (video needs position update)
+
+            const payload = {
+                add_seconds: delta,
+                _token: csrfToken
+            };
+
+            if (isYoutube) {
+                payload.last_watched_second = Math.floor(currentVideoTime);
+            }
+
+            fetch("{{ route('user.lessons.progress', $lesson->id) }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update local baseline
+                    serverSpent = data.progress.duration_seconds;
+                    lastSyncedSessionSpent = sessionSpent; // Mark as synced
+                }
+            })
+            .catch(err => console.error('Progress sync failed', err));
+        }
+
+        // 5. YouTube API Integration
+        if (isYoutube) {
+            // Load API if not already loaded
+            if (!window.YT) {
+                const tag = document.createElement('script');
+                tag.src = "https://www.youtube.com/iframe_api";
+                const firstScriptTag = document.getElementsByTagName('script')[0];
+                firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+            }
+
+            window.onYouTubeIframeAPIReady = function() {
+                new YT.Player('lesson-iframe', {
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            };
+
+            function onPlayerReady(event) {
+                // Seek to last watched
+                if (lastWatched > 0) {
+                    event.target.seekTo(lastWatched);
+                }
+                
+                // Track current time every 1s
+                setInterval(() => {
+                    if (event.target && event.target.getCurrentTime) {
+                        currentVideoTime = event.target.getCurrentTime();
+                        checkCompletion(); // Check immediately if video position jumps
+                    }
+                }, 1000);
+            }
+
+            function onPlayerStateChange(event) {
+                if (event.data === YT.PlayerState.PLAYING) {
+                    isVideoPlaying = true;
+                } else if (event.data === YT.PlayerState.PAUSED) {
+                    isVideoPlaying = false;
+                    syncProgress(); // Save position immediately on pause
+                } else if (event.data === YT.PlayerState.ENDED) {
+                    isVideoPlaying = false;
+                    syncProgress(); // Save final position
+                    checkCompletion();
+                }
+            }
+        }
+    });
     </script>
     @endpush
