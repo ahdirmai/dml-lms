@@ -40,7 +40,7 @@ class CourseAssignController extends Controller
             ->select('enrollments.*')
             ->join('users', 'users.id', '=', 'enrollments.user_id')
             ->orderBy('users.name', 'asc')
-            ->with('user:id,name,email')
+            ->with(['user:id,name,email', 'dueDate'])
             ->paginate(10, ['enrollments.*'], 'enrolled_page')
             ->withQueryString();
 
