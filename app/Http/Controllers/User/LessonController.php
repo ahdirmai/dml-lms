@@ -4,7 +4,6 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lms\Course;
-use App\Models\Lms\Enrollment;
 use App\Models\Lms\Lesson;
 use App\Models\Lms\LessonProgress;
 use App\Models\Lms\Module;
@@ -21,14 +20,14 @@ class LessonController extends Controller
     {
         // return 'x';
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
 
         // 1. Ambil Objek Inti
         // Eager load relasi quiz, pertanyaan, dan pilihan jawaban
         $lesson = Lesson::with([
-            'quiz.questions.choices'
+            'quiz.questions.choices',
         ])->findOrFail($lessonId);
 
         // Ambil course induk
@@ -46,22 +45,23 @@ class LessonController extends Controller
             ->flip();
 
         $all_modules = Module::where('course_id', $course->id)
-            ->with(['lessons' => fn($q) => $q->orderBy('order_no', 'asc')])
+            ->with(['lessons' => fn ($q) => $q->orderBy('order_no', 'asc')])
             ->orderBy('order', 'asc')
             ->get();
 
         $modules = $all_modules->map(function ($module) use ($completedLessonIds) {
             $lessons = $module->lessons->map(function ($lesson) use ($completedLessonIds) {
                 return [
-                    'id'      => $lesson->id,
-                    'title'   => $lesson->title,
-                    'type'    => $lesson->kind,
+                    'id' => $lesson->id,
+                    'title' => $lesson->title,
+                    'type' => $lesson->kind,
                     'is_done' => isset($completedLessonIds[$lesson->id]),
                 ];
             });
+
             return [
-                'id'      => $module->id,
-                'title'   => $module->title,
+                'id' => $module->id,
+                'title' => $module->title,
                 'lessons' => $lessons->all(),
             ];
         });
@@ -72,8 +72,8 @@ class LessonController extends Controller
         if ($lesson->kind === 'quiz' && $lesson->quiz) {
             $count = $lesson->quiz->questions->count();
             $meta = "$count pertanyaan";
-        } elseif ($lesson->duration_minutes) {
-            $meta = $lesson->duration_minutes . ' menit';
+        } elseif ($lesson->duration_seconds) {
+            $meta = convert_seconds_to_duration($lesson->duration_seconds);
         }
         $lesson->meta = $meta; // Tambahkan properti ini ke objek Eloquent
 

@@ -28,6 +28,7 @@ class Course extends Model
         'created_by',
         'using_due_date',
         'learning_objectives', // TAMBAHAN
+        'duration_seconds',
     ];
 
     protected $casts = [
@@ -38,6 +39,7 @@ class Course extends Model
         'pretest_passing_score' => 'float',
         'posttest_passing_score' => 'float',
         'learning_objectives' => 'array', // TAMBAHAN
+        'duration_seconds' => 'integer',
     ];
 
     public $incrementing = false;

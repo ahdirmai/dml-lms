@@ -17,12 +17,12 @@ class UserCourseService
                 'course' => function ($query) {
                     $query
                         ->withCount(['modules', 'lessons'])
-                        ->withSum('lessons', 'duration_minutes')
+                        ->withSum('lessons', 'duration_seconds')
                         ->with([
                             'categories',
                             'instructor',
                             'modules' => function ($q_mod) {
-                                $q_mod->withSum('lessons', 'duration_minutes')
+                                $q_mod->withSum('lessons', 'duration_seconds')
                                     ->with('lessons:id,module_id')
                                     ->orderBy('order');
                             },
@@ -134,7 +134,7 @@ class UserCourseService
                 $modulesData[] = [
                     'no' => $module->order,
                     'title' => $module->title,
-                    'duration' => $module->lessons_sum_duration_minutes ?? 0,
+                    'duration' => $module->lessons_sum_duration_seconds ?? 0,
                     'status' => $modStatus,
                 ];
             }
@@ -177,7 +177,7 @@ class UserCourseService
                 'assignedOn' => $enrollment->enrolled_at->format('d M Y'),
                 'assignedBy' => $course->instructor?->name ?? 'Administrator',
                 'totalModules' => $course->modules_count,
-                'totalDuration' => $course->lessons_sum_duration_minutes ?? 0,
+                'totalDuration' => convert_seconds_to_duration($course->lessons_sum_duration_seconds ?? 0),
                 'preTestScore' => $pretestScore,
                 'postTestScore' => $posttestScore,
                 'progress' => $progress,
@@ -284,7 +284,7 @@ class UserCourseService
 
                 // tambahan untuk UI baru + modal test
                 'total_modules' => $course->modules_count ?? $course->modules->count(),
-                'total_duration' => $course->lessons_sum_duration_minutes ?? 0,
+                'total_duration' => convert_seconds_to_duration($course->lessons_sum_duration_seconds ?? 0),
                 'assigned_on' => optional($enrollment->enrolled_at)->format('d M Y'),
                 'all_lessons_completed' => ($totalLessons > 0 && $completedLessons >= $totalLessons),
 
@@ -366,7 +366,7 @@ class UserCourseService
                     // PENTING: load soal & opsi untuk pre/post test
                     'pretest.questions.options',
                     'posttest.questions.options',
-                ]),
+                ])->withSum('lessons', 'duration_seconds'),
                 'lessonProgress',
                 // 'latestPretestAttempt', // Removed: Accessor, not a relation
                 // 'latestPosttestAttempt', // Removed: Accessor, not a relation
@@ -421,7 +421,7 @@ class UserCourseService
                     'id' => $lesson->id,
                     'title' => $lesson->title,
                     'type' => $lesson->kind,
-                    'duration' => $lesson->duration_minutes ? $lesson->duration_minutes.'m' : '-',
+                    'duration' => $lesson->duration_seconds ? convert_seconds_to_duration($lesson->duration_seconds) : '-',
                     'is_done' => $isDone,
                     'is_locked' => $pretestGateActive,
                     'questions' => $isQuiz ? ($lesson->quiz->questions_count ?? 0) : 0,

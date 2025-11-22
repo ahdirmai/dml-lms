@@ -152,7 +152,7 @@
             </p>
 
             @php
-            $est = $estimatedDuration ?? optional($course)->estimated_duration;
+            $est = $estimatedDuration ?? convert_seconds_to_duration(optional($course)->lessons_sum_duration_seconds ?? 0);
             $valid = $validUntil ?? optional($course)->valid_until;
             @endphp
 

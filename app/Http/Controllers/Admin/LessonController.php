@@ -7,8 +7,8 @@ use App\Models\Lms\Lesson;
 use App\Models\Lms\Module;
 use App\Support\LinkParsers; // Asumsi file ini ada
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Throwable;
 
 class LessonController extends Controller
@@ -19,10 +19,11 @@ class LessonController extends Controller
     public function store(Request $request, Module $module)
     {
         $data = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'kind'        => ['required', 'in:youtube,gdrive,quiz'],
+            'kind' => ['required', 'in:youtube,gdrive,quiz'],
             'content_url' => ['nullable', 'url'],
+            'duration_seconds' => ['nullable', 'integer', 'min:0'],
         ]);
 
         try {
@@ -41,29 +42,34 @@ class LessonController extends Controller
             $nextOrder = ((int) Lesson::where('module_id', $freshModule->id)->max('order_no')) + 1;
 
             $lesson = Lesson::create([
-                'id'               => (string) Str::uuid(),
-                'course_id'        => $freshModule->course_id,
-                'module_id'        => $freshModule->id,
-                'title'            => $data['title'],
-                'description'      => $data['description'] ?? null,
-                'kind'             => $data['kind'],
-                'content_url'      => $data['content_url'] ?? null,
+                'id' => (string) Str::uuid(),
+                'course_id' => $freshModule->course_id,
+                'module_id' => $freshModule->id,
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'kind' => $data['kind'],
+                'content_url' => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
-                'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
-                'order_no'            => $nextOrder,
+                'gdrive_file_id' => $ids['gdrive_file_id'] ?? null,
+                'order_no' => $nextOrder,
+                'duration_seconds' => $data['duration_seconds'] ?? 0,
             ]);
+
+            // Recalculate Course Duration
+            $totalDuration = Lesson::where('course_id', $freshModule->course_id)->sum('duration_seconds');
+            \App\Models\Lms\Course::where('id', $freshModule->course_id)->update(['duration_seconds' => $totalDuration]);
 
             DB::commit();
 
             return redirect()
                 ->route('admin.courses.edit', $freshModule->course_id)
-                ->with('success', 'Pelajaran "' . $lesson->title . '" berhasil dibuat.');
+                ->with('success', 'Pelajaran "'.$lesson->title.'" berhasil dibuat.');
         } catch (Throwable $e) {
             DB::rollBack();
 
             return back()
                 ->withInput()
-                ->with('error', 'Gagal membuat pelajaran: ' . $e->getMessage());
+                ->with('error', 'Gagal membuat pelajaran: '.$e->getMessage());
         }
     }
 
@@ -75,11 +81,11 @@ class LessonController extends Controller
         // return [$request->all(), $lesson];
 
         $data = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
-            'kind'        => ['required', 'in:youtube,gdrive,quiz'],
+            'title' => ['required', 'string', 'max:255'],
+            'kind' => ['required', 'in:youtube,gdrive,quiz'],
             'content_url' => ['nullable', 'url'],
             'description' => ['nullable', 'string'],
-
+            'duration_seconds' => ['nullable', 'integer', 'min:0'],
         ]);
 
         try {
@@ -95,25 +101,30 @@ class LessonController extends Controller
 
             // return $ids;
             $freshLesson->update([
-                'title'            => $data['title'],
-                'kind'             => $data['kind'],
-                'content_url'      => $data['content_url'] ?? null,
+                'title' => $data['title'],
+                'kind' => $data['kind'],
+                'content_url' => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
-                'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
+                'gdrive_file_id' => $ids['gdrive_file_id'] ?? null,
                 'description' => $data['description'],
+                'duration_seconds' => $data['duration_seconds'] ?? 0,
             ]);
+
+            // Recalculate Course Duration
+            $totalDuration = Lesson::where('course_id', $freshLesson->course_id)->sum('duration_seconds');
+            \App\Models\Lms\Course::where('id', $freshLesson->course_id)->update(['duration_seconds' => $totalDuration]);
 
             DB::commit();
 
             return redirect()
                 ->route('admin.courses.edit', $freshLesson->course_id)
-                ->with('success', 'Pelajaran "' . $freshLesson->title . '" berhasil diperbarui.');
+                ->with('success', 'Pelajaran "'.$freshLesson->title.'" berhasil diperbarui.');
         } catch (Throwable $e) {
             DB::rollBack();
 
             return back()
                 ->withInput()
-                ->with('error', 'Gagal memperbarui pelajaran: ' . $e->getMessage());
+                ->with('error', 'Gagal memperbarui pelajaran: '.$e->getMessage());
         }
     }
 
@@ -132,20 +143,24 @@ class LessonController extends Controller
                 ->firstOrFail();
 
             $courseId = $freshLesson->course_id;
-            $title    = $freshLesson->title;
+            $title = $freshLesson->title;
 
             $freshLesson->delete();
+
+            // Recalculate Course Duration
+            $totalDuration = Lesson::where('course_id', $courseId)->sum('duration_seconds');
+            \App\Models\Lms\Course::where('id', $courseId)->update(['duration_seconds' => $totalDuration]);
 
             DB::commit();
 
             return redirect()
                 ->route('admin.courses.edit', $courseId)
-                ->with('success', 'Pelajaran "' . $title . '" berhasil dihapus.');
+                ->with('success', 'Pelajaran "'.$title.'" berhasil dihapus.');
         } catch (Throwable $e) {
             DB::rollBack();
 
             return back()
-                ->with('error', 'Gagal menghapus pelajaran: ' . $e->getMessage());
+                ->with('error', 'Gagal menghapus pelajaran: '.$e->getMessage());
         }
     }
 
@@ -155,8 +170,8 @@ class LessonController extends Controller
     public function reorder(Request $request, Module $module)
     {
         $data = $request->validate([
-            'orders'   => ['required', 'array'],
-            'orders.*.id'    => ['required', 'string'],
+            'orders' => ['required', 'array'],
+            'orders.*.id' => ['required', 'string'],
             'orders.*.order' => ['required', 'integer'],
         ]);
 
@@ -182,7 +197,7 @@ class LessonController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            return back()->with('error', 'Gagal menyimpan urutan pelajaran: ' . $e->getMessage());
+            return back()->with('error', 'Gagal menyimpan urutan pelajaran: '.$e->getMessage());
         }
     }
 
@@ -194,13 +209,15 @@ class LessonController extends Controller
 
         if ($kind === 'youtube') {
             $id = LinkParsers::parseYouTubeId($url);
-            abort_if(!$id, 422, 'Invalid YouTube link');
+            abort_if(! $id, 422, 'Invalid YouTube link');
+
             return ['youtube_video_id' => $id, 'gdrive_file_id' => null];
         }
 
         if ($kind === 'gdrive') {
             $id = LinkParsers::parseGDriveFileId($url);
-            abort_if(!$id, 422, 'Invalid Google Drive link');
+            abort_if(! $id, 422, 'Invalid Google Drive link');
+
             return ['gdrive_file_id' => $id, 'youtube_video_id' => null];
         }
 

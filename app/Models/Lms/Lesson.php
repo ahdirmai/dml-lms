@@ -9,8 +9,8 @@ class Lesson extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['course_id', 'title', 'slug', 'kind', 'content', 'order_no', 'duration_minutes', 'module_id', 'description', 'youtube_video_id', 'gdrive_file_id', 'content_url'];
-    protected $casts = ['duration_minutes' => 'integer'];
+    protected $fillable = ['course_id', 'title', 'slug', 'kind', 'content', 'order_no', 'duration_seconds', 'module_id', 'description', 'youtube_video_id', 'gdrive_file_id', 'content_url'];
+    protected $casts = ['duration_seconds' => 'integer'];
     public $incrementing = false;
     protected $keyType = 'string';
 

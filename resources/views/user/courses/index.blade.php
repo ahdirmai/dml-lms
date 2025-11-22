@@ -158,7 +158,7 @@
                                 @if(!empty($c['total_duration']))
                                 <span class="inline-flex items-center gap-1 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
                                     <i data-lucide="clock" class="w-3 h-3 text-gray-400"></i>
-                                    {{ $c['total_duration'] }} m
+                                    {{ $c['total_duration'] }}
                                 </span>
                                 @endif
                             </div>

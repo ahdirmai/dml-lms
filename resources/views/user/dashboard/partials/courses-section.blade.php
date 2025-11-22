@@ -63,7 +63,7 @@
                             </div>
                             <div class="flex items-center" title="Total Durasi">
                                 <i data-lucide="clock" class="w-4 h-4 mr-1 text-gray-400"></i>
-                                {{ $course['totalDuration'] }} min
+                                {{ $course['totalDuration'] }}
                             </div>
                             <div class="flex items-center" title="Diberikan oleh">
                                 <i data-lucide="user-check" class="w-4 h-4 mr-1 text-gray-400"></i>

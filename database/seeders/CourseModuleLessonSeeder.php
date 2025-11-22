@@ -2,13 +2,12 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
 use App\Models\Lms\Course;
 use App\Models\Lms\CourseLesson;
 use App\Models\Lms\CourseModule;
 use App\Models\Lms\Module;
-use App\Models\Lms\Lesson;
+use App\Models\User;
+use Illuminate\Database\Seeder;
 
 class CourseModuleLessonSeeder extends Seeder
 {
@@ -20,7 +19,7 @@ class CourseModuleLessonSeeder extends Seeder
 
         Course::factory()
             ->count(3)
-            ->state(fn() => ['created_by' => $author?->id])
+            ->state(fn () => ['created_by' => $author?->id])
             ->create()
             ->each(function (Course $course) {
                 // Buat 3 module dengan sequence agar position berurutan & course_id benar
@@ -34,7 +33,7 @@ class CourseModuleLessonSeeder extends Seeder
                     ->create();
 
                 $totalDuration = 0;
-                $totalLessons  = 0;
+                $totalLessons = 0;
 
                 foreach ($modules as $module) {
                     // 4 lessons per module, posisi 1..4, module_id pasti benar
@@ -48,13 +47,13 @@ class CourseModuleLessonSeeder extends Seeder
                         )
                         ->create();
 
-                    $totalLessons  += $lessons->count();
-                    $totalDuration += $lessons->sum('duration_minutes');
+                    $totalLessons += $lessons->count();
+                    $totalDuration += $lessons->sum('duration_seconds');
                 }
 
                 $course->update([
-                    'lessons_count'    => $totalLessons,
-                    'duration_minutes' => $totalDuration,
+                    'lessons_count' => $totalLessons,
+                    'duration_seconds' => $totalDuration,
                 ]);
             });
 

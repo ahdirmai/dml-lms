@@ -113,6 +113,7 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                     data-type="lesson" data-lesson-id="{{ $lesson->id }}" data-module-id="{{ $module->id }}"
                     data-lesson-title="{{ e($lesson->title) }}" data-lesson-description="{{ e($lesson->description) }}"
                     data-lesson-kind="{{ e($lesson->kind) }}" data-lesson-url="{{ e($lesson->content_url) }}"
+                    data-lesson-duration="{{ $lesson->duration_seconds }}"
                     data-lesson-update-url="{{ route('admin.lessons.update', $lesson->id) }}">
                     <div class="flex items-center">
                         <svg class="w-4 h-4 mr-2 text-gray-500 drag-handle" fill="none" stroke="currentColor"
@@ -386,6 +387,13 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Deskripsi Singkat</label>
                     <textarea name="description" rows="3" placeholder="Deskripsi singkat pelajaran..."
                         class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent">{{ old('description', $lessonToEdit->description ?? '') }}</textarea>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Durasi (Detik)</label>
+                    <input type="number" name="duration_seconds" min="0" placeholder="0"
+                        class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
+                        value="{{ old('duration_seconds', $lessonToEdit->duration_seconds ?? 0) }}" />
                 </div>
 
                 <div>
@@ -729,6 +737,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const desc  = item.dataset.lessonDescription || '';
       const kind  = item.dataset.lessonKind || 'youtube';
       const url   = item.dataset.lessonUrl || '';
+      const dur   = item.dataset.lessonDuration || 0;
       const upUrl = item.dataset.lessonUpdateUrl; if(!upUrl) return;
 
       document.getElementById("editor-title").textContent = `Edit Pelajaran: ${title}`;
@@ -741,6 +750,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ensurePatch(lessonCreateForm);
       setVal('#lesson-create-form input[name="title"]', title);
       setVal('#lesson-create-form textarea[name="description"]', desc);
+      setVal('#lesson-create-form input[name="duration_seconds"]', dur);
       lessonContentType.value = kind;
       renderLessonFields(kind, url);
     });
