@@ -187,6 +187,8 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
                 'prev' => $prev,
                 'next' => $next,
                 'isCompleted' => $currentProgress && $currentProgress->status === 'completed',
+                'course' => $course,
+                'enrollment' => $enrollment ?? null,
                 ])
             </main>
         </div>
@@ -278,6 +280,9 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
         const lessonDuration = {{ $lesson->duration_seconds ?? 0 }};
         const isVideo = {{ ($lesson->kind === 'video' || $lesson->youtube_video_id) ? 'true' : 'false' }};
         const isYoutube = {{ $lesson->youtube_video_id ? 'true' : 'false' }};
+        
+        // Completion status
+        let isCompleted = {{ $currentProgress && $currentProgress->status === 'completed' ? 'true' : 'false' }};
         
         // Initial values from server
         let serverSpent = {{ $currentProgress->duration_seconds ?? 0 }};
@@ -394,6 +399,9 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
                     
                     // Enable next lesson navigation
                     enableNextLesson();
+                    
+                    // Mark as completed locally to stop sync
+                    isCompleted = true;
                 }
             })
             .catch(err => {
@@ -481,6 +489,8 @@ $next = $currIndex !== false && $currIndex < count($flat)-1 ? $flat[$currIndex+1
 
         // 4. Sync Function
         function syncProgress() {
+            if (isCompleted) return; // Stop syncing if already completed
+
             const delta = sessionSpent - lastSyncedSessionSpent;
             if (delta <= 0 && !isYoutube) return; // Nothing to sync if not video (video needs position update)
 

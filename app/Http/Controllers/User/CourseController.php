@@ -293,4 +293,54 @@ class CourseController extends Controller
                 ->with('error', 'Terjadi kesalahan saat menyimpan ulasan: '.$e->getMessage());
         }
     }
+
+    /**
+     * Generate and stream Certificate PDF.
+     */
+    public function certificate(Request $request, Course $course)
+    {
+        $user = Auth::user();
+        $enrollment = Enrollment::where('user_id', $user->id)
+            ->where('course_id', $course->id)
+            ->firstOrFail();
+
+        // 1. Cek apakah sudah review (syarat sertifikat)
+        if (! $enrollment->review_stars) {
+            return redirect()
+                ->route('user.courses.show', $course->id)
+                ->with('error', 'Anda harus memberikan ulasan sebelum mengunduh sertifikat.');
+        }
+
+        // 2. Cek atau Buat Sertifikat
+        $certificate = $enrollment->certificate;
+        if (! $certificate) {
+            // Generate nomor unik: DML-YYYYMMDD-RANDOM
+            $dateStr = now()->format('Ymd');
+            $uniqueStr = strtoupper(Str::random(6));
+            $certNum = "DML-{$dateStr}-{$uniqueStr}";
+
+            $certificate = \App\Models\Lms\Certificate::create([
+                'enrollment_id' => $enrollment->id,
+                'certificate_number' => $certNum,
+                'issued_at' => now(),
+            ]);
+        }
+
+        // 3. Siapkan Data View
+        // Load modules for syllabus page
+        $course->load(['modules.lessons']);
+
+        $data = [
+            'user' => $user,
+            'course' => $course,
+            'certificate' => $certificate,
+            'date' => $certificate->issued_at->format('d F Y'),
+        ];
+
+        // 4. Generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('user.certificates.pdf', $data);
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->stream("Sertifikat-{$course->title}.pdf");
+    }
 }

@@ -116,7 +116,8 @@ class LessonController extends Controller
             'course',
             'modules',
             'lesson',
-            'currentProgress'
+            'currentProgress',
+            'enrollment'
         ));
     }
 

@@ -193,6 +193,8 @@ class UserCourseService
                 'submit_pre_url' => $submitPreUrl,
                 'submit_post_url' => $submitPostUrl,
                 'submit_review_url' => $submitReviewUrl,
+                'hasReviewed' => !is_null($enrollment->review_stars),
+                'certificateUrl' => route('user.courses.certificate', $course),
             ];
         })->filter()->all();
     }
@@ -295,6 +297,8 @@ class UserCourseService
                 'submit_pre_url' => $submitPreUrl,
                 'submit_post_url' => $submitPostUrl,
                 'submit_review_url' => $submitReviewUrl,
+                'hasReviewed' => !is_null($enrollment->review_stars),
+                'certificateUrl' => route('user.courses.certificate', $course),
             ];
         })->filter()->values()->all();
     }
@@ -491,6 +495,8 @@ class UserCourseService
             'submit_pre_url' => $submitPreUrl,
             'submit_post_url' => $submitPostUrl,
             'submit_review_url' => $submitReviewUrl,
+            'hasReviewed' => !is_null($enrollment->review_stars),
+            'certificateUrl' => route('user.courses.certificate', $course),
         ]];
 
         return [
@@ -501,6 +507,7 @@ class UserCourseService
             'posttestResult' => $posttestResult,
             'pretestGateActive' => $pretestGateActive,
             'testCourses' => $testCourses,
+            'reviewStars' => $enrollment->review_stars,
         ];
     }
 

@@ -13,6 +13,7 @@ class Enrollment extends Model
         'status',
         'enrolled_at',
         'completed_at',
+        'review_stars',
     ];
 
     // Tambahkan cast untuk tanggal
@@ -71,5 +72,10 @@ class Enrollment extends Model
             ->where('quiz_id', $posttest_id)
             ->orderByDesc('created_at')
             ->first();
+    }
+
+    public function certificate()
+    {
+        return $this->hasOne(Certificate::class);
     }
 }

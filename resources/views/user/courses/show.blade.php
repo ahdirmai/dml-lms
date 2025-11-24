@@ -157,6 +157,10 @@
                     // Access Control
                     'isAccessBlocked' => $isAccessBlocked ?? false,
                     'accessMessage' => $accessMessage ?? null,
+
+                    // Review Status
+                    'reviewStars' => $reviewStars ?? null,
+                    'hasReviewed' => !is_null($reviewStars ?? null),
                     ])
 
                     {{-- Banner info kalau pretest gate aktif --}}
@@ -224,9 +228,35 @@
                 // Access Control
                 'isAccessBlocked' => $isAccessBlocked ?? false,
                 'accessMessage' => $accessMessage ?? null,
+
+                // Review Status
+                'reviewStars' => $reviewStars ?? null,
+                'hasReviewed' => !is_null($reviewStars ?? null),
                 ])
             </div>
         </div>
     </div>
     <x-test.modals :courses="$testCourses" />
+
+    @push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const openParam = urlParams.get('open');
+            
+            if (openParam === 'posttest') {
+                // Remove param from URL without refresh
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+                
+                // Trigger modal
+                setTimeout(() => {
+                    if (window.TestFlow && window.TestFlow.startPostTest) {
+                        window.TestFlow.startPostTest('{{ $course->id }}');
+                    }
+                }, 500);
+            }
+        });
+    </script>
+    @endpush
 </x-app-layout>

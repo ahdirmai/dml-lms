@@ -84,6 +84,9 @@ Route::name('user.')
          */
         Route::post('/courses/{course}/review', [UserCourseController::class, 'submitReview'])
             ->name('courses.review.submit');
+
+        Route::get('/courses/{course}/certificate', [UserCourseController::class, 'certificate'])
+            ->name('courses.certificate');
     });
 
 /*

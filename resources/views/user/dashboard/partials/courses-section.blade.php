@@ -160,7 +160,12 @@
                             @endif
 
                             @elseif($status === 'Completed')
-                            @if(!empty($course['submit_review_url']))
+                            @if($course['hasReviewed'])
+                            <x-ui.button as="a" href="{{ $course['certificateUrl'] }}" target="_blank" variant="success" size="sm">
+                                <i data-lucide="award" class="w-3.5 h-3.5 mr-1"></i>
+                                Lihat Sertifikat
+                            </x-ui.button>
+                            @elseif(!empty($course['submit_review_url']))
                             <x-ui.button variant="secondary" size="sm" onclick="window.TestFlow?.openReview('{{ $courseId }}')">
                                 Review
                             </x-ui.button>

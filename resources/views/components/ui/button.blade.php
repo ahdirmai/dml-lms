@@ -21,6 +21,7 @@ $variants = [
 'danger' => 'bg-danger text-white hover:brightness-95 focus:ring-danger',
 'subtle' => 'bg-soft text-dark hover:brightness-95 focus:ring-brand',
 'link' => 'text-brand hover:underline focus:ring-brand',
+'success' => 'bg-emerald-600 text-white hover:brightness-95 focus:ring-emerald-600',
 ];
 $classes = "$base {$sizes[$size]} {$variants[$variant]}";
 @endphp

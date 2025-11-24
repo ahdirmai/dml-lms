@@ -242,7 +242,12 @@
                                     @endif
 
                                 @elseif($status === 'completed')
-                                    @if($hasReviewUrl)
+                                    @if($c['hasReviewed'])
+                                        <x-ui.button as="a" href="{{ $c['certificateUrl'] }}" target="_blank" variant="success" size="sm" class="w-full justify-center">
+                                            <i data-lucide="award" class="w-3.5 h-3.5 mr-1"></i>
+                                            Lihat Sertifikat
+                                        </x-ui.button>
+                                    @elseif($hasReviewUrl)
                                         <x-ui.button variant="primary" size="sm" onclick="window.TestFlow?.openReview('{{ $courseId }}')" class="w-full justify-center group">
                                             <i data-lucide="star" class="w-3.5 h-3.5 mr-1 group-hover:scale-110 transition-transform"></i>
                                             Review Kursus
