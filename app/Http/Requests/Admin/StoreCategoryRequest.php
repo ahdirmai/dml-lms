@@ -23,6 +23,8 @@ class StoreCategoryRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'slug' => ['nullable', 'string', 'max:191', 'unique:categories,slug'],
             'description' => ['nullable', 'string'],
+            'created_by' => ['required', 'exists:users,id']
+
         ];
     }
 }

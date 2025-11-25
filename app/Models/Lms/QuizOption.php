@@ -9,9 +9,10 @@ class QuizOption extends Model
 {
     use HasUuids;
 
+    protected $fillable = ['question_id', 'option_text', 'is_correct', 'order_no'];
+    protected $casts = ['is_correct' => 'boolean'];
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'question_id', 'option_text', 'is_correct'];
 
     public function question()
     {

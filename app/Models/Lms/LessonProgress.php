@@ -2,8 +2,8 @@
 
 namespace App\Models\Lms;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class LessonProgress extends Model
 {
@@ -17,11 +17,12 @@ class LessonProgress extends Model
         'completed_at',
         'last_activity_at',
         'duration_seconds',
+        'last_watched_second',
     ];
 
     protected $casts = [
-        'started_at'      => 'datetime',
-        'completed_at'    => 'datetime',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
         'last_activity_at' => 'datetime',
     ];
 

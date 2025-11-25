@@ -9,16 +9,46 @@ module.exports = {
     ],
     theme: {
         extend: {
+            fontFamily: {
+                // jadikan Inter font utama yang dipakai di seluruh app
+                sans: [
+                    "Inter",
+                    "system-ui",
+                    "-apple-system",
+                    "BlinkMacSystemFont",
+                    '"Segoe UI"',
+                    "Roboto",
+                    '"Helvetica Neue"',
+                    "Arial",
+                    '"Noto Sans"',
+                    "sans-serif",
+                    '"Apple Color Emoji"',
+                    '"Segoe UI Emoji"',
+                    '"Segoe UI Symbol"',
+                    '"Noto Color Emoji"',
+                ],
+            },
             colors: {
                 soft: "#F4F6F8", // background lembut
                 dark: "#343A40",
                 danger: "#B00E24",
-                accent: "#37BCD8",
+                accent: "#37BCD8", // Warna sekunder
                 brand: "#09759A", // warna utama
+
+                // Warna tambahan untuk leaderboard
+                "green-prd": "#DFF5E1",
+                "red-prd": "#FBE5E5",
+                "medal-gold": "#FFC000",
+                "medal-silver": "#C0C0C0",
+                "medal-bronze": "#CD7F32",
             },
             boxShadow: {
                 "custom-soft":
-                    "0 10px 15px -3px rgba(9,117,154,0.10), 0 4px 6px -2px rgba(9,117,154,0.06)",
+                    "0 10px 15px -3px rgba(9,117,154,0.07), 0 4px 6px -2px rgba(9,117,154,0.04)",
+            },
+            borderRadius: {
+                xl: "1rem", // 16px
+                "2xl": "1.5rem", // 24px
             },
         },
     },
@@ -37,6 +67,7 @@ module.exports = {
         { pattern: /dark:(bg|text|border)-(dark)/ },
     ],
     plugins: [
-        // require('@tailwindcss/forms'), // aktifkan kalau mau form look rapi
+        require("@tailwindcss/typography"), // Plugin untuk 'prose'
+        // require('@tailwindcss/forms'),
     ],
 };

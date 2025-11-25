@@ -32,6 +32,10 @@ return new class extends Migration {
                 ->constrained('users')
                 ->nullOnDelete();
 
+            $t->foreignId('created_by')
+                ->nullable()
+                ->constrained('users')
+                ->nullOnDelete();
             $t->timestamps();
             $t->softDeletes();
 

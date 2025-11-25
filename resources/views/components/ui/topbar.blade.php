@@ -1,21 +1,29 @@
-@props(['avatar' => null,
-'header'=>null])
+{{-- resources/views/components/ui/topbar.blade.php --}}
+@props(['avatar' => null, 'header' => null])
 
-<header class="flex justify-between items-center bg-white p-4 rounded-xl shadow mb-6">
-    {{-- 🔍 Search Bar --}}
-    <div class="relative w-full max-w-sm">
+{{-- Margin bawah (mb-6) hanya akan ada di layar besar (lg) --}}
+<header class="flex justify-between items-center bg-white p-4 rounded-xl shadow lg:mb-6 relative">
+
+    {{-- Tombol Hamburger (hanya terlihat di layar kecil) --}}
+    <button id="open-sidebar" class="lg:hidden p-2 -ml-2 text-dark rounded-md flex-shrink-0">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+            </path>
+        </svg>
+    </button>
+
+    {{-- Header (Hanya terlihat di layar besar) --}}
+    <div class="relative w-full max-w-sm lg:max-w-none flex-grow mx-2 overflow-hidden truncate hidden lg:block">
         @isset($header)
-        {{-- <header class="mb-6"> --}}
-            <h2 class="text-xl font-semibold text-dark">
-                {{ $header }}
-            </h2>
-            {{--
-        </header>x --}}
+        <h2 class="text-xl font-semibold text-dark truncate">
+            {{ $header }}
+        </h2>
         @endisset
     </div>
 
-    {{-- 🔔 Notification + Avatar --}}
-    <div class="flex items-center space-x-4 ml-4">
+    {{-- Notification + Avatar --}}
+    {{-- Margin kiri disesuaikan untuk mobile (ml-2) dan desktop (lg:ml-auto) --}}
+    <div class="flex items-center space-x-2 sm:space-x-4 ml-2 lg:ml-auto flex-shrink-0">
         <button class="relative p-2 text-dark hover:text-dark bg-soft rounded-full">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -24,29 +32,28 @@
             <span class="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent"></span>
         </button>
 
-        {{-- 👤 Avatar + Dropdown --}}
         @php
         $user = auth()->user();
         $roleNames = $user?->getRoleNames() ?? collect();
         $activeRole = $user?->active_role ?? $roleNames->first();
         @endphp
 
-        <div class="relative" x-data="{ open: false }" @click.outside="open = false">
-            <button @click="open = !open"
+        {{-- Avatar + Dropdown --}}
+        <div class="relative">
+            <button id="avatarBtn"
                 class="flex items-center focus:outline-none focus:ring-2 focus:ring-brand rounded-full">
                 <img src="{{ $avatar ?? 'https://via.placeholder.com/40' }}" alt="User Avatar"
-                    class="w-10 h-10 rounded-full border-2 border-brand shadow">
+                    class="w-10 h-10 rounded-full border-2 border-brand shadow object-cover">
             </button>
 
-            {{-- Dropdown --}}
-            <div x-cloak x-show="open" x-transition
-                class="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-soft overflow-hidden z-50">
+            <div id="dropdownProfile"
+                class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-soft overflow-hidden z-50">
                 <div class="px-4 py-3 border-b border-soft">
                     <p class="text-sm font-semibold text-dark">{{ $user?->name }}</p>
                     <p class="text-xs text-dark/60 truncate">{{ $user?->email }}</p>
                 </div>
 
-                {{-- 🌐 Active Role --}}
+                {{-- Active Role --}}
                 @if($roleNames->count() > 0)
                 <div class="px-4 py-3 border-b border-soft">
                     <div class="flex items-center justify-between mb-2">
@@ -57,7 +64,6 @@
                         </span>
                     </div>
 
-                    {{-- Switcher --}}
                     @if($roleNames->count() > 1)
                     <form action="{{ route('switch.role') }}" method="POST">
                         @csrf
@@ -74,7 +80,7 @@
                 </div>
                 @endif
 
-                {{-- ⚙️ Profile & Logout --}}
+                {{-- Profile & Logout --}}
                 <div class="py-2">
                     <a href="{{ route('profile.edit') }}"
                         class="block px-4 py-2.5 text-sm text-dark hover:bg-soft transition">
@@ -93,3 +99,24 @@
         </div>
     </div>
 </header>
+
+{{-- Vanilla JS for Dropdown --}}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const avatarBtn = document.getElementById('avatarBtn');
+        const dropdown = document.getElementById('dropdownProfile');
+
+        if (avatarBtn && dropdown) {
+            avatarBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdown.classList.contains('hidden') && !avatarBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>

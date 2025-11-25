@@ -7,6 +7,8 @@ use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Http\Requests\Admin\UpdateCategoryRequest;
 use App\Models\Lms\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class CategoryController extends Controller
 {
@@ -14,9 +16,15 @@ class CategoryController extends Controller
     {
         $q = (string) $request->get('q', '');
         $categories = Category::query()
-            ->when($q, fn($qr) => $qr->where('name', 'like', "%{$q}%")->orWhere('slug', 'like', "%{$q}%"))
+            ->when(
+                $q,
+                fn($qr) =>
+                $qr->where('name', 'like', "%{$q}%")
+                    ->orWhere('slug', 'like', "%{$q}%")
+            )
             ->orderBy('created_at', 'desc')
-            ->paginate(15)->withQueryString();
+            ->paginate(15)
+            ->withQueryString();
 
         return view('admin.pages.categories.index', compact('categories', 'q'));
     }
@@ -28,8 +36,23 @@ class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request)
     {
-        Category::create($request->validated());
-        return redirect()->route('admin.categories.index')->with('success', 'Category created.');
+        try {
+            DB::beginTransaction();
+
+            Category::create($request->validated());
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.categories.index')
+                ->with('success', 'Category created successfully.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to create category: ' . $e->getMessage());
+        }
     }
 
     public function edit(Category $category)
@@ -39,18 +62,45 @@ class CategoryController extends Controller
 
     public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $category->update($request->validated());
-        return redirect()->route('admin.categories.index')->with('success', 'Category updated.');
+        try {
+            DB::beginTransaction();
+
+            $category->update($request->validated());
+
+            DB::commit();
+
+            return redirect()
+                ->route('admin.categories.index')
+                ->with('success', 'Category updated successfully.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()
+                ->withInput()
+                ->with('error', 'Failed to update category: ' . $e->getMessage());
+        }
     }
 
     public function destroy(Category $category)
     {
-        // RESTRICT di level DB untuk course; akan gagal jika masih dipakai
         try {
+            DB::beginTransaction();
+
+            $name = $category->name;
+
+            // RESTRICT di DB akan memicu exception jika category sedang digunakan di pivot course
             $category->delete();
-            return back()->with('success', 'Category deleted.');
-        } catch (\Throwable $e) {
-            return back()->with('error', 'Cannot delete: category is in use.');
+
+            DB::commit();
+
+            return back()->with('success', "Category \"{$name}\" deleted successfully.");
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            return back()->with(
+                'error',
+                'Cannot delete category because it is still in use or another error occurred: ' . $e->getMessage()
+            );
         }
     }
 }

@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-dark leading-tight">Edit Tag</h2>
             <x-ui.breadcrumbs :items="[
         ['label'=>'Dashboard','href'=>route('dashboard')],
-        ['label'=>'Tags','href'=>route('admin.tags.index')],
+        ['label'=>'Tags','href'=>route('instructor.tags.index')],
         ['label'=>'Edit'],
       ]" />
         </div>
@@ -14,7 +14,7 @@
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white shadow sm:rounded-lg">
                 <div class="p-6">
-                    @include('admin.pages.tags._form', [
+                    @include('instructor.pages.tags._form', [
                     'action' => route('admin.tags.update',$tag),
                     'method' => 'PUT',
                     'tag' => $tag,

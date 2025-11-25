@@ -11,6 +11,7 @@ return new class extends Migration {
             $t->uuid('id')->primary();
             $t->foreignUuid('course_id')->constrained('courses')->cascadeOnDelete();
             $t->string('title', 200);
+            $t->string('slug', 220)->nullable()->unique();
             $t->integer('order')->default(1);
             $t->timestamps();
             $t->index(['course_id', 'order']);

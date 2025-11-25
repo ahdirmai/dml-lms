@@ -10,8 +10,8 @@ return new class extends Migration {
         Schema::create('quiz_questions', function (Blueprint $t) {
             $t->uuid('id')->primary();
             $t->foreignUuid('quiz_id')->constrained('quizzes')->cascadeOnDelete();
-            $t->text('question');
-            $t->string('qtype', 20)->default('mcq'); // mcq|truefalse|shortanswer
+            $t->text('question_text');
+            $t->string('question_type', 20)->default('mcq'); // mcq|truefalse|shortanswer
             $t->decimal('score', 6, 2)->default(1.00);
             $t->integer('order')->default(1);
             $t->timestamps();

@@ -1,25 +1,37 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
-// ---------- Controllers (Public & Auth) ----------
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\CourseAssignController as AdminCourseAssignController;
+use App\Http\Controllers\Admin\CourseController as AdminCourseController;
+// Public Controllers
+use App\Http\Controllers\Admin\CourseProgressController as AdminCourseProgressController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+// Admin Controllers
+use App\Http\Controllers\Admin\LessonController as AdminLessonController;
+use App\Http\Controllers\Admin\ModuleController as AdminModuleController;
+use App\Http\Controllers\Admin\PermissionsController;
+use App\Http\Controllers\Admin\QuizController as AdminQuizController;
+use App\Http\Controllers\Admin\RolesController;
+use App\Http\Controllers\Admin\TagController;
+use App\Http\Controllers\Admin\UserIntegrationController;
+use App\Http\Controllers\Admin\UsersController;
+use App\Http\Controllers\Auth\SsoLoginController;
+use App\Http\Controllers\Instructor\CourseAssignController as InstructorCourseAssignController;
+use App\Http\Controllers\Instructor\CourseController as InstructorCourseController;
+use App\Http\Controllers\Instructor\CourseProgressController as InstructorCourseProgressController;
+use App\Http\Controllers\Instructor\LessonController as InstructorLessonController;
+use App\Http\Controllers\Instructor\ModuleController as InstructorModuleController;
+// Instructor Controllers
+use App\Http\Controllers\Instructor\QuizController as InstructorQuizController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSwitchController;
-
-// ---------- Controllers (Admin: Core Management) ----------
-use App\Http\Controllers\Admin\UsersController;
-use App\Http\Controllers\Admin\RolesController;
-use App\Http\Controllers\Admin\PermissionsController;
-use App\Http\Controllers\Admin\CategoryController;
-use App\Http\Controllers\Admin\TagController;
-
-// ---------- Controllers (Admin: LMS) ----------
-use App\Http\Controllers\Admin\CourseController;
-use App\Http\Controllers\Admin\ModuleController;
-use App\Http\Controllers\Admin\LessonController;
-use App\Http\Controllers\Admin\QuizController;
-use App\Http\Controllers\Admin\CourseAssignController;
-use App\Http\Controllers\Admin\CourseProgressController;
+use App\Http\Controllers\User\CourseController as UserCourseController;
+use App\Http\Controllers\User\DashboardController as UserDashboardController;
+use App\Http\Controllers\User\LessonController as UserLessonController;
+// User Controllers
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,11 +39,55 @@ use App\Http\Controllers\Admin\CourseProgressController;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', fn() => view('welcome'));
+Route::get('/', function () {
+    $user = Auth::user();
 
-Route::get('/dashboard', fn() => view('dashboard'))
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
+    if (! $user) {
+        return redirect()->route('login');
+    }
+
+    $activeRole = $user->active_role ?? $user->getRoleNames()->first();
+
+    return match ($activeRole) {
+        'admin' => redirect()->route('admin.dashboard'),
+        'instructor' => redirect()->route('instructor.dashboard'),
+        'student' => redirect()->route('user.dashboard'),
+        default => redirect()->route('dashboard'),
+    };
+});
+
+Route::match(['GET', 'POST'], '/sso/login', SsoLoginController::class)
+    ->name('sso.login')
+    ->middleware('web');
+
+/*
+|--------------------------------------------------------------------------
+| User (Student)
+|--------------------------------------------------------------------------
+*/
+Route::name('user.')
+    ->middleware(['auth', 'role.active:student'])
+    ->group(function () {
+        Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
+        Route::get('/my-courses', [UserCourseController::class, 'index'])->name('courses.index');
+
+        Route::get('/courses/{course}', [UserCourseController::class, 'show'])->name('courses.show');
+        Route::get('/lessons/{lesson}', [UserLessonController::class, 'show'])->name('lessons.show');
+        Route::post('/lessons/{lesson}/progress', [UserLessonController::class, 'updateProgress'])->name('lessons.progress');
+        Route::post('/lessons/{lesson}/complete', [UserLessonController::class, 'markAsComplete'])->name('lessons.complete');
+
+        Route::post('/courses/{course}/test/{type}', [UserCourseController::class, 'submitTest'])
+            ->name('courses.test.submit');
+
+        /**
+         * Endpoint untuk menangani submit review (bintang).
+         */
+        Route::post('/courses/{course}/review', [UserCourseController::class, 'submitReview'])
+            ->name('courses.review.submit');
+
+        Route::get('/courses/{course}/certificate', [UserCourseController::class, 'certificate'])
+            ->name('courses.certificate');
+    });
 
 /*
 |--------------------------------------------------------------------------
@@ -39,168 +95,176 @@ Route::get('/dashboard', fn() => view('dashboard'))
 |--------------------------------------------------------------------------
 */
 Route::middleware('auth')->group(function () {
-    Route::get('/profile',  [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Switch role (for multi-role users)
     Route::post('/switch-role', [RoleSwitchController::class, 'switch'])->name('switch.role');
 });
 
 /*
 |--------------------------------------------------------------------------
-| Admin Area
-| - All admin routes live under /admin
-| - Name prefix: admin.*
-| - Middleware: auth + role.active:admin
+| Admin
 |--------------------------------------------------------------------------
 */
 Route::prefix('admin')
     ->name('admin.')
     ->middleware(['auth', 'role.active:admin'])
     ->group(function () {
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
-        /*
-        |------------------------------
-        | Admin: User & RBAC Management
-        |------------------------------
-        */
-        Route::resource('users', UsersController::class)->names([
-            'index'   => 'users.index',
-            'create'  => 'users.create',
-            'store'   => 'users.store',
-            'edit'    => 'users.edit',
-            'update'  => 'users.update',
-            'destroy' => 'users.destroy',
-        ])->except(['show']);
+        // RBAC
+        Route::resource('users', UsersController::class)->except(['show']);
+        Route::get('user-activity', [\App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('user-activity.index');
 
-        Route::resource('roles', RolesController::class)->names([
-            'index'   => 'roles.index',
-            'create'  => 'roles.create',
-            'store'   => 'roles.store',
-            'edit'    => 'roles.edit',
-            'update'  => 'roles.update',
-            'destroy' => 'roles.destroy',
-        ])->except(['show']);
+        Route::prefix('integrations')->name('integration.')->group(function () {
 
-        Route::resource('permissions', PermissionsController::class)->names([
-            'index'   => 'permissions.index',
-            'create'  => 'permissions.create',
-            'store'   => 'permissions.store',
-            'edit'    => 'permissions.edit',
-            'update'  => 'permissions.update',
-            'destroy' => 'permissions.destroy',
-        ])->except(['show']);
+            // Halaman utama integrasi user (Blade view)
+            // GET /admin/integrations/users
+            Route::get('users', [UserIntegrationController::class, 'index'])
+                ->name('users.index');
 
-        /*
-        |------------------------------
-        | Admin: Taxonomy (Categories/Tags)
-        |------------------------------
-        */
+            // Preview data dari sistem internal (AJAX, JSON)
+            // POST /admin/integrations/users/preview
+            Route::post('users/preview', [UserIntegrationController::class, 'preview'])
+                ->name('users.preview');
+
+            // Import user yang dipilih (AJAX/normal POST)
+            // POST /admin/integrations/users/import
+            Route::post('users/import', [UserIntegrationController::class, 'import'])
+                ->name('users.import');
+        });
+        Route::resource('roles', RolesController::class)->except(['show']);
+        Route::resource('permissions', PermissionsController::class)->except(['show']);
+
+        // Taxonomy
         Route::resource('categories', CategoryController::class)->except(['show']);
-        Route::resource('tags',       TagController::class)->except(['show']);
+        Route::resource('tags', TagController::class)->except(['show']);
 
-        /*
-        |------------------------------
-        | Admin: LMS — Courses & Builder
-        |------------------------------
-        */
         // Courses
-        Route::get('courses',                 [CourseController::class, 'index'])->name('courses.index');
-        Route::get('courses/create',          [CourseController::class, 'create'])->name('courses.create');
-        Route::post('courses',                [CourseController::class, 'store'])->name('courses.store');
-        Route::get('courses/{course}/edit',   [CourseController::class, 'edit'])->name('courses.edit');
-        Route::patch('courses/{course}',      [CourseController::class, 'update'])->name('courses.update');
-        Route::post('courses/{course}/publish', [CourseController::class, 'publish'])->name('courses.publish');
-        Route::delete('courses/{course}',     [CourseController::class, 'destroy'])->name('courses.destroy');
+        Route::get('courses', [AdminCourseController::class, 'index'])->name('courses.index');
+        Route::get('courses/create', [AdminCourseController::class, 'create'])->name('courses.create');
+        Route::post('courses', [AdminCourseController::class, 'store'])->name('courses.store');
+        Route::get('courses/{course}/edit', [AdminCourseController::class, 'edit'])->name('courses.edit');
+        Route::patch('courses/{course}', [AdminCourseController::class, 'update'])->name('courses.update');
+        Route::post('courses/{course}/publish', [AdminCourseController::class, 'publish'])->name('courses.publish');
+        Route::delete('courses/{course}', [AdminCourseController::class, 'destroy'])->name('courses.destroy');
 
         // Modules
-        Route::post('courses/{course}/modules',        [ModuleController::class, 'store'])->name('modules.store');
-        Route::patch('modules/{module}',               [ModuleController::class, 'update'])->name('modules.update');
-        Route::delete('modules/{module}',              [ModuleController::class, 'destroy'])->name('modules.destroy');
-        Route::post('courses/{course}/modules/reorder', [ModuleController::class, 'reorder'])->name('modules.reorder');
+        Route::post('courses/{course}/modules', [AdminModuleController::class, 'store'])->name('modules.store');
+        Route::patch('modules/{module}', [AdminModuleController::class, 'update'])->name('modules.update');
+        Route::delete('modules/{module}', [AdminModuleController::class, 'destroy'])->name('modules.destroy');
+        Route::post('courses/{course}/modules/reorder', [AdminModuleController::class, 'reorder'])->name('modules.reorder');
 
         // Lessons
-        Route::post('modules/{module}/lessons',        [LessonController::class, 'store'])->name('lessons.store');
-        Route::patch('lessons/{lesson}',               [LessonController::class, 'update'])->name('lessons.update');
-        Route::delete('lessons/{lesson}',              [LessonController::class, 'destroy'])->name('lessons.destroy');
-        Route::post('modules/{module}/lessons/reorder', [LessonController::class, 'reorder'])->name('lessons.reorder');
+        Route::post('modules/{module}/lessons', [AdminLessonController::class, 'store'])->name('lessons.store');
+        Route::patch('lessons/{lesson}', [AdminLessonController::class, 'update'])->name('lessons.update');
+        Route::delete('lessons/{lesson}', [AdminLessonController::class, 'destroy'])->name('lessons.destroy');
+        Route::post('modules/{module}/lessons/reorder', [AdminLessonController::class, 'reorder'])->name('lessons.reorder');
 
+        // === Pre/Posttest Store (views-only stage; controller bisa diisi nanti) ===
+        Route::post('courses/{course}/pretest', [AdminQuizController::class, 'storePretest'])->name('courses.pretest.store');
+        Route::post('courses/{course}/posttest', [AdminQuizController::class, 'storePosttest'])->name('courses.posttest.store');
         // Quizzes
-        Route::post('lessons/{lesson}/quiz',           [QuizController::class, 'upsert'])->name('quizzes.upsert');
-        Route::post('quizzes/{quiz}/questions',        [QuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
-        Route::patch('questions/{question}',           [QuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
-        Route::delete('questions/{question}',          [QuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
 
-        // Enrollment Assign (Instructor/Admin assigns students)
-        Route::get('courses/{course}/assign-students', [CourseAssignController::class, 'form'])->name('courses.assign');
-        Route::post('courses/{course}/assign-students', [CourseAssignController::class, 'store'])->name('courses.assign.store');
-        Route::delete('courses/{course}/students/{user}', [CourseAssignController::class, 'remove'])->name('courses.assign.remove');
+        Route::prefix('quizzes/{quiz}')->group(function () {
+            Route::post('questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+            Route::put('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+            Route::delete('questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+            Route::post('questions/reorder', [AdminQuizController::class, 'reorderQuestions'])->name('quizzes.questions.reorder'); // optional
 
-        // Progress Tracking
-        Route::get('courses/{course}/progress', [CourseProgressController::class, 'show'])->name('courses.progress');
+        });
+
+        Route::post('courses/{course}/posttest/copy-from-pretest', [AdminQuizController::class, 'syncFromPretest'])
+            ->name('courses.posttest.copyFromPretest');
+
+        Route::post(
+            'courses/{course}/quizzes/{kind}/import', // <--- SALAH
+            [AdminQuizController::class, 'importByKind']
+        )
+            ->name('courses.quizzes.import');
+        // Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
+        // Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+        // Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+        // Route::delete('questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+
+        // Assignments
+        Route::get('courses/{course}/assign-students', [AdminCourseAssignController::class, 'form'])->name('courses.assign');
+        Route::post('courses/{course}/assign-students', [AdminCourseAssignController::class, 'store'])->name('courses.assign.store');
+        Route::delete('courses/{course}/students/{user}', [AdminCourseAssignController::class, 'remove'])->name('courses.assign.remove');
+
+        // Progress
+        Route::get('courses/{course}/progress', [AdminCourseProgressController::class, 'show'])->name('courses.progress');
+        Route::get('courses/{course}/students/{student}/progress', [AdminCourseProgressController::class, 'showStudent'])->name('courses.students.progress');
     });
 
+/*
+|--------------------------------------------------------------------------
+| Instructor
+|--------------------------------------------------------------------------
+*/
 Route::prefix('instructor')
     ->name('instructor.')
     ->middleware(['auth', 'role.active:instructor'])
     ->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Instructor\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
-        /*
-        |------------------------------
-        | Instructor: Taxonomy (Categories/Tags)
-        |------------------------------
-        */
         Route::resource('categories', CategoryController::class)->except(['show']);
-        Route::resource('tags',       TagController::class)->except(['show']);
+        Route::resource('tags', TagController::class)->except(['show']);
 
-        /*
-        |------------------------------
-        | Instructor: LMS — Courses & Builder
-        |------------------------------
-        */
         // Courses
-        Route::get('courses',                 [CourseController::class, 'index'])->name('courses.index');
-        Route::get('courses/create',          [CourseController::class, 'create'])->name('courses.create');
-        Route::post('courses',                [CourseController::class, 'store'])->name('courses.store');
-        Route::get('courses/{course}/edit',   [CourseController::class, 'edit'])->name('courses.edit');
-        Route::patch('courses/{course}',      [CourseController::class, 'update'])->name('courses.update');
-        Route::post('courses/{course}/publish', [CourseController::class, 'publish'])->name('courses.publish');
-        Route::delete('courses/{course}',     [CourseController::class, 'destroy'])->name('courses.destroy');
+        Route::get('courses', [InstructorCourseController::class, 'index'])->name('courses.index');
+        Route::get('courses/create', [InstructorCourseController::class, 'create'])->name('courses.create');
+        Route::post('courses', [InstructorCourseController::class, 'store'])->name('courses.store');
+        Route::get('courses/{course}/edit', [InstructorCourseController::class, 'edit'])->name('courses.edit');
+        Route::patch('courses/{course}', [InstructorCourseController::class, 'update'])->name('courses.update');
+        Route::post('courses/{course}/publish', [InstructorCourseController::class, 'publish'])->name('courses.publish');
+        Route::delete('courses/{course}', [InstructorCourseController::class, 'destroy'])->name('courses.destroy');
 
         // Modules
-        Route::post('courses/{course}/modules',        [ModuleController::class, 'store'])->name('modules.store');
-        Route::patch('modules/{module}',               [ModuleController::class, 'update'])->name('modules.update');
-        Route::delete('modules/{module}',              [ModuleController::class, 'destroy'])->name('modules.destroy');
-        Route::post('courses/{course}/modules/reorder', [ModuleController::class, 'reorder'])->name('modules.reorder');
+        Route::post('courses/{course}/modules', [InstructorModuleController::class, 'store'])->name('modules.store');
+        Route::patch('modules/{module}', [InstructorModuleController::class, 'update'])->name('modules.update');
+        Route::delete('modules/{module}', [InstructorModuleController::class, 'destroy'])->name('modules.destroy');
+        Route::post('courses/{course}/modules/reorder', [InstructorModuleController::class, 'reorder'])->name('modules.reorder');
 
         // Lessons
-        Route::post('modules/{module}/lessons',        [LessonController::class, 'store'])->name('lessons.store');
-        Route::patch('lessons/{lesson}',               [LessonController::class, 'update'])->name('lessons.update');
-        Route::delete('lessons/{lesson}',              [LessonController::class, 'destroy'])->name('lessons.destroy');
-        Route::post('modules/{module}/lessons/reorder', [LessonController::class, 'reorder'])->name('lessons.reorder');
+        Route::post('modules/{module}/lessons', [InstructorLessonController::class, 'store'])->name('lessons.store');
+        Route::patch('lessons/{lesson}', [InstructorLessonController::class, 'update'])->name('lessons.update');
+        Route::delete('lessons/{lesson}', [InstructorLessonController::class, 'destroy'])->name('lessons.destroy');
+        Route::post('modules/{module}/lessons/reorder', [InstructorLessonController::class, 'reorder'])->name('lessons.reorder');
 
         // Quizzes
-        Route::post('lessons/{lesson}/quiz',           [QuizController::class, 'upsert'])->name('quizzes.upsert');
-        Route::post('quizzes/{quiz}/questions',        [QuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
-        Route::patch('questions/{question}',           [QuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
-        Route::delete('questions/{question}',          [QuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
+        Route::post('lessons/{lesson}/quiz', [InstructorQuizController::class, 'upsert'])->name('quizzes.upsert');
+        Route::post('quizzes/{quiz}/questions', [InstructorQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
+        Route::patch('questions/{question}', [InstructorQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
+        Route::delete('questions/{question}', [InstructorQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
 
-        // Enrollment Assign (Instructor/Admin assigns students)
-        Route::get('courses/{course}/assign-students', [CourseAssignController::class, 'form'])->name('courses.assign');
-        Route::post('courses/{course}/assign-students', [CourseAssignController::class, 'store'])->name('courses.assign.store');
-        Route::delete('courses/{course}/students/{user}', [CourseAssignController::class, 'remove'])->name('courses.assign.remove');
+        // === Pre/Posttest Store ===
+        Route::post('courses/{course}/pretest', [InstructorQuizController::class, 'storePretest'])->name('courses.pretest.store');
+        Route::post('courses/{course}/posttest', [InstructorQuizController::class, 'storePosttest'])->name('courses.posttest.store');
 
-        // Progress Tracking
-        Route::get('courses/{course}/progress', [CourseProgressController::class, 'show'])->name('courses.progress');
+        Route::post('courses/{course}/posttest/copy-from-pretest', [InstructorQuizController::class, 'syncFromPretest'])
+            ->name('courses.posttest.copyFromPretest');
+
+        Route::post('courses/{course}/quizzes/{kind}/import', [InstructorQuizController::class, 'importByKind'])
+            ->name('courses.quizzes.import');
+
+        // Assignments
+        Route::get('courses/{course}/assign-students', [InstructorCourseAssignController::class, 'form'])->name('courses.assign');
+        Route::post('courses/{course}/assign-students', [InstructorCourseAssignController::class, 'store'])->name('courses.assign.store');
+        Route::delete('courses/{course}/students/{user}', [InstructorCourseAssignController::class, 'remove'])->name('courses.assign.remove');
+
+        // Progress
+        Route::get('courses/{course}/progress', [InstructorCourseProgressController::class, 'show'])->name('courses.progress');
+        Route::get('courses/{course}/students/{student}/progress', [InstructorCourseProgressController::class, 'showStudent'])->name('courses.students.progress');
     });
 
-
-use Illuminate\Support\Facades\Artisan;
-
+/*
+|--------------------------------------------------------------------------
+| Util: cache clear (protected by key)
+|--------------------------------------------------------------------------
+*/
 Route::get('/_util/cache', function () {
-
-    // return [request('key'), env('MAINT_KEY')];
     abort_unless(request('key') === env('MAINT_KEY'), 403);
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
@@ -209,7 +273,8 @@ Route::get('/_util/cache', function () {
     Artisan::call('config:cache');
     Artisan::call('view:cache');
     Artisan::call('event:cache');
+
     return 'OK';
 });
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';

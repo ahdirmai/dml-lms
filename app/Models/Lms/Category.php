@@ -30,5 +30,8 @@ class Category extends Model
         return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
     
-    // relasi ke Course nanti: hasMany(Course::class)
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class, 'category_courses');
+    }
 }

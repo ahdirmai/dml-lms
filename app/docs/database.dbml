@@ -1,0 +1,233 @@
+// Database DBML for dml-lms-fix
+// Docs: https://dbml.dbdiagram.io/docs
+
+Table users {
+  id bigint [pk, increment]
+  name varchar
+  email varchar [unique]
+  email_verified_at timestamp [nullable]
+  password varchar
+  remember_token varchar [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table user_profiles {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  department varchar [nullable]
+  job_title varchar [nullable]
+  is_employee boolean [default: true]
+  is_hr boolean [default: false]
+  raw_payload json [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table courses {
+  id uuid [pk]
+  title varchar(180)
+  slug varchar(220) [unique]
+  subtitle varchar(180) [nullable]
+  description longtext
+  thumbnail_path varchar(2048) [nullable]
+  status varchar(20) [default: 'draft', note: 'draft|published|archived']
+  published_at timestamp [nullable]
+  difficulty varchar(20) [default: 'beginner', note: 'beginner|intermediate|advanced']
+  instructor_id bigint [nullable]
+  created_by bigint [nullable]
+  created_at timestamp
+  updated_at timestamp
+  deleted_at timestamp [nullable]
+}
+
+Table modules {
+  id uuid [pk]
+  course_id uuid [not null]
+  title varchar(200)
+  slug varchar(220) [nullable, unique]
+  order int [default: 1]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table lessons {
+  id uuid [pk]
+  course_id uuid [not null]
+  module_id uuid [not null]
+  title varchar(200)
+  description text [nullable]
+  slug varchar(220) [nullable, unique]
+  kind varchar(20) [default: 'youtube', note: 'youtube|gdrive|quiz|pdf|text|external']
+  content_url varchar(2048) [nullable]
+  youtube_video_id varchar(32) [nullable]
+  gdrive_file_id varchar(128) [nullable]
+  order_no int [default: 1]
+  duration_minutes int [default: 0]
+  is_preview boolean [default: false]
+  published_at timestamp [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table categories {
+  id uuid [pk]
+  name varchar(150)
+  slug varchar(191) [unique]
+  description text [nullable]
+  created_by bigint [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table tags {
+  id uuid [pk]
+  name varchar(150) [unique]
+  slug varchar(191) [unique]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table category_courses {
+  category_id uuid [pk]
+  course_id uuid [pk]
+}
+
+Table course_tags {
+  course_id uuid [pk]
+  tag_id uuid [pk]
+}
+
+Table enrollments {
+  id bigint [pk, increment]
+  user_id bigint [not null]
+  course_id uuid [not null]
+  status enum [default: 'assigned', note: 'assigned, active, completed, cancelled']
+  enrolled_at timestamp [nullable]
+  completed_at timestamp [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table lesson_progress {
+  id bigint [pk, increment]
+  enrollment_id bigint [not null]
+  lesson_id uuid [not null]
+  status enum [default: 'not_started', note: 'not_started, in_progress, completed']
+  started_at timestamp [nullable]
+  completed_at timestamp [nullable]
+  last_activity_at timestamp [nullable]
+  duration_seconds int [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table certificates {
+  id uuid [pk]
+  enrollment_id bigint [not null]
+  certificate_number varchar [unique]
+  issued_at timestamp
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table quizzes {
+  id uuid [pk]
+  quizzable_id uuid [nullable, note: 'Polymorphic ID']
+  quizzable_type varchar [nullable, note: 'Polymorphic Type']
+  quiz_kind varchar(20) [default: 'regular', note: 'pretest|posttest|regular']
+  title varchar(200)
+  time_limit_seconds int [default: 0]
+  shuffle_questions boolean [default: true]
+  shuffle_options boolean [default: true]
+  passing_score decimal(5,2) [nullable]
+  total_questions int [default: 0]
+  max_score int [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table quiz_questions {
+  id uuid [pk]
+  quiz_id uuid [not null]
+  question_text text
+  question_type varchar(20) [default: 'mcq', note: 'mcq|truefalse|shortanswer']
+  score decimal(6,2) [default: 1.00]
+  order int [default: 1]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table quiz_options {
+  id uuid [pk]
+  question_id uuid [not null]
+  option_text text
+  is_correct boolean [default: false]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table quiz_attempts {
+  id uuid [pk]
+  quiz_id uuid [not null]
+  user_id bigint [not null]
+  attempt_no int [default: 1]
+  started_at timestamp [nullable]
+  finished_at timestamp [nullable]
+  score decimal(6,2) [default: 0]
+  passed boolean [default: false]
+  duration_seconds int [nullable]
+  created_at timestamp
+  updated_at timestamp
+}
+
+Table quiz_answers {
+  id uuid [pk]
+  attempt_id uuid [not null]
+  question_id uuid [not null]
+  selected_option_id uuid [nullable]
+  answer_text text [nullable]
+  is_correct boolean [default: false]
+  score_awarded decimal(6,2) [default: 0]
+  created_at timestamp
+  updated_at timestamp
+}
+
+// Relationships
+
+Ref: user_profiles.user_id - users.id [delete: cascade]
+
+Ref: courses.instructor_id > users.id [delete: set null]
+Ref: courses.created_by > users.id [delete: set null]
+
+Ref: modules.course_id > courses.id [delete: cascade]
+
+Ref: lessons.course_id > courses.id [delete: cascade]
+Ref: lessons.module_id > modules.id [delete: cascade]
+
+Ref: categories.created_by > users.id [delete: cascade]
+
+Ref: category_courses.category_id > categories.id [delete: cascade]
+Ref: category_courses.course_id > courses.id [delete: cascade]
+
+Ref: course_tags.course_id > courses.id [delete: cascade]
+Ref: course_tags.tag_id > tags.id [delete: cascade]
+
+Ref: enrollments.user_id > users.id [delete: cascade]
+Ref: enrollments.course_id > courses.id [delete: cascade]
+
+Ref: lesson_progress.enrollment_id > enrollments.id [delete: cascade]
+Ref: lesson_progress.lesson_id > lessons.id [delete: cascade]
+
+Ref: certificates.enrollment_id > enrollments.id [delete: cascade]
+
+Ref: quiz_questions.quiz_id > quizzes.id [delete: cascade]
+
+Ref: quiz_options.question_id > quiz_questions.id [delete: cascade]
+
+Ref: quiz_attempts.quiz_id > quizzes.id [delete: cascade]
+Ref: quiz_attempts.user_id > users.id [delete: cascade]
+
+Ref: quiz_answers.attempt_id > quiz_attempts.id [delete: cascade]
+Ref: quiz_answers.question_id > quiz_questions.id [delete: cascade]
+Ref: quiz_answers.selected_option_id > quiz_options.id [delete: set null]

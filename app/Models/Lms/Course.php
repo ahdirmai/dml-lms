@@ -3,57 +3,103 @@
 namespace App\Models\Lms;
 
 use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
 
 class Course extends Model
 {
     use HasUuids;
 
-    public $incrementing = false;
-    protected $keyType = 'string';
-
     protected $fillable = [
-        'id',
         'title',
         'slug',
         'subtitle',
         'description',
-        'thumbnail_path',
-        'difficulty',
         'status',
-        'published_at',
-        'instructor_id'
+        'difficulty',
+        'has_pretest',
+        'has_posttest',
+        'default_passing_score',
+        'pretest_passing_score',
+        'posttest_passing_score',
+        'require_pretest_before_content',
+        'thumbnail_path',
+        'instructor_id',
+        'created_by',
+        'using_due_date',
+        'learning_objectives', // TAMBAHAN
+        'duration_seconds',
     ];
 
-    protected $casts = ['published_at' => 'datetime'];
+    protected $casts = [
+        'has_pretest' => 'boolean',
+        'has_posttest' => 'boolean',
+        'require_pretest_before_content' => 'boolean',
+        'default_passing_score' => 'float',
+        'pretest_passing_score' => 'float',
+        'posttest_passing_score' => 'float',
+        'learning_objectives' => 'array', // TAMBAHAN
+        'duration_seconds' => 'integer',
+    ];
 
-    public function categories()
-    {
-        return $this->belongsToMany(Category::class, 'category_course');
-    }
-    public function instructor()
-    {
-        return $this->belongsTo(\App\Models\User::class, 'instructor_id');
-    }
+    public $incrementing = false;
+
+    protected $keyType = 'string';
+
+    // ... (relasi yang ada: modules, lessons, categories, tags, instructor) ...
+
     public function modules()
     {
-        return $this->hasMany(Module::class);
+        return $this->hasMany(Module::class)->orderBy('order'); // Tambahkan orderBy
     }
+
     public function lessons()
     {
         return $this->hasMany(Lesson::class);
     }
-    public function enrollments()
+
+    public function categories()
     {
-        return $this->hasMany(Enrollment::class, 'course_id');
+        return $this->belongsToMany(Category::class, 'category_courses');
     }
 
-    public function students()
+    public function tags()
     {
-        // convenience relation
-        return $this->belongsToMany(User::class, 'enrollments', 'course_id', 'user_id')
-            ->withPivot(['status', 'enrolled_at', 'completed_at'])
-            ->withTimestamps();
+        return $this->belongsToMany(Tag::class, 'course_tags');
+    }
+
+    public function instructor()
+    {
+        return $this->belongsTo(User::class, 'instructor_id', 'id');
+    }
+
+    // Pre/Post via polymorph
+    public function pretest()
+    {
+        return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'pretest');
+    }
+
+    public function posttest()
+    {
+        return $this->morphOne(Quiz::class, 'quizzable')->where('quiz_kind', 'posttest');
+    }
+
+    /**
+     * TAMBAHAN: Relasi untuk semua kuis yang terkait dengan course ini
+     * (termasuk pretest dan posttest).
+     */
+    public function quizzes()
+    {
+        return $this->morphMany(Quiz::class, 'quizzable');
+    }
+
+    public function enrollments()
+    {
+        return $this->hasMany(Enrollment::class, 'course_id', 'id');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
 }

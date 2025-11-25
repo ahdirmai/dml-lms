@@ -16,10 +16,12 @@
                         <x-ui.input name="q" value="{{ $q }}" placeholder="Search name/slug" class="w-64" />
                         <x-ui.button type="submit" variant="primary">Filter</x-ui.button>
                         @if(request()->filled('q'))
-                        <x-ui.button as="a" href="{{ route('admin.tags.index') }}" variant="subtle">Reset</x-ui.button>
+                        <x-ui.button as="a" href="{{ route('instructor.tags.index') }}" variant="subtle">Reset
+                        </x-ui.button>
                         @endif
                     </form>
-                    <x-ui.button as="a" href="{{ route('admin.tags.create') }}" variant="primary">+ Create</x-ui.button>
+                    <x-ui.button as="a" href="{{ route('instructor.tags.create') }}" variant="primary">+ Create
+                    </x-ui.button>
                 </div>
             </div>
 
@@ -39,9 +41,9 @@
                                 <x-ui.td><code class="text-xs text-dark/60">{{ $t->slug }}</code></x-ui.td>
                                 <x-ui.td align="right">
                                     <div class="flex justify-end gap-2">
-                                        <x-ui.button as="a" href="{{ route('admin.tags.edit',$t) }}" size="sm"
+                                        <x-ui.button as="a" href="{{ route('instructor.tags.edit',$t) }}" size="sm"
                                             variant="outline">Edit</x-ui.button>
-                                        <form action="{{ route('admin.tags.destroy',$t) }}" method="POST"
+                                        <form action="{{ route('instructor.tags.destroy',$t) }}" method="POST"
                                             onsubmit="return confirm('Delete this tag?')">
                                             @csrf @method('DELETE')
                                             <x-ui.button type="submit" size="sm" variant="danger">Delete</x-ui.button>

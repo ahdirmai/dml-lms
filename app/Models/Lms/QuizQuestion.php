@@ -9,9 +9,10 @@ class QuizQuestion extends Model
 {
     use HasUuids;
 
+    protected $fillable = ['quiz_id', 'question_text', 'question_type', 'order', 'score'];
+    protected $casts = ['score' => 'float'];
     public $incrementing = false;
     protected $keyType = 'string';
-    protected $fillable = ['id', 'quiz_id', 'question', 'qtype', 'score', 'order'];
 
     public function quiz()
     {
@@ -20,5 +21,10 @@ class QuizQuestion extends Model
     public function options()
     {
         return $this->hasMany(QuizOption::class, 'question_id');
+    }
+
+    public function answer()
+    {
+        return $this->hasMany(QuizAnswer::class, 'question_id');
     }
 }

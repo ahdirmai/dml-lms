@@ -26,7 +26,7 @@ class CourseFactory extends Factory
             'status'           => 'draft',
             'published_at'     => null,
             'created_by'       => \App\Models\User::factory(),
-            'duration_minutes' => 0,
+            'duration_seconds' => 0,
             'lessons_count'    => 0,
         ];
     }

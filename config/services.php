@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'internal_users' => [
+        'base_url' => env('INTERNAL_USERS_BASE_URL', 'https://internal.example.com/api'),
+        'token'    => env('INTERNAL_USERS_TOKEN'),
+    ],
+
 ];
