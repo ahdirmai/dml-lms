@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('activity_type'); // login, view_course, etc.
-            $table->nullableMorphs('subject'); // subject_type, subject_id
+            $table->nullableUuidMorphs('subject'); // subject_type, subject_id
             $table->text('description')->nullable();
             $table->string('ip_address')->nullable();
             $table->string('user_agent')->nullable();

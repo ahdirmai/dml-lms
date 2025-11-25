@@ -71,6 +71,13 @@ class CourseController extends Controller
             $q->where('name', 'instructor');
         })->orderBy('name')->get();
 
+        $stats = [
+            'total'     => Course::count(),
+            'published' => Course::where('status', 'published')->count(),
+            'draft'     => Course::where('status', 'draft')->count(),
+            'archived'  => Course::where('status', 'archived')->count(),
+        ];
+
         return view('admin.pages.courses.index', compact(
             'courses',
             'categories',
@@ -79,7 +86,8 @@ class CourseController extends Controller
             'status',
             'categoryId',
             'instructorId',
-            'sort'
+            'sort',
+            'stats'
         ));
     }
 
