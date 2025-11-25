@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Lms\Course;
 use App\Models\User;
 use App\Models\Lms\Enrollment as LmsEnrollment;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -95,6 +96,17 @@ class CourseAssignController extends Controller
             // (Opsional) kirim notifikasi setelah commit
             // DB::afterCommit(fn () => NotifyAssignedStudents::dispatch($fresh->id, $uids->all()));
 
+            // Log activity
+            UserActivityLog::create([
+                'user_id' => Auth::id(),
+                'activity_type' => 'assign_students',
+                'subject_type' => Course::class,
+                'subject_id' => $fresh->id,
+                'description' => "Assigned " . count($uids) . " students to course: {$fresh->title}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
             return back()->with('success', 'Mahasiswa berhasil di-assign ke kursus.');
         } catch (Throwable $e) {
             DB::rollBack();
@@ -128,6 +140,18 @@ class CourseAssignController extends Controller
 
             if ($deleted) {
                 // DB::afterCommit(fn () => NotifyUnassignedStudent::dispatch($fresh->id, $user->id));
+                
+                // Log activity
+                UserActivityLog::create([
+                    'user_id' => Auth::id(),
+                    'activity_type' => 'remove_student',
+                    'subject_type' => Course::class,
+                    'subject_id' => $fresh->id,
+                    'description' => "Removed student {$user->name} from course: {$fresh->title}",
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                ]);
+                
                 return back()->with('success', 'Mahasiswa dihapus dari kursus.');
             }
 

@@ -37,14 +37,21 @@
                     <div>
                         <div class="text-sm text-dark/60">Course</div>
                         <div class="text-lg font-semibold text-dark">{{ $course->title }}</div>
-                        <div class="text-xs text-dark/60 mt-1">
-                            Status:
-                            @if($course->status === 'published')
-                            <x-ui.badge color="brand">Published</x-ui.badge>
-                            @elseif($course->status === 'archived')
-                            <x-ui.badge color="danger">Archived</x-ui.badge>
-                            @else
-                            <x-ui.badge color="gray">Draft</x-ui.badge>
+                        <div class="text-xs text-dark/60 mt-1 flex items-center gap-4">
+                            <span>
+                                Status:
+                                @if($course->status === 'published')
+                                <x-ui.badge color="brand">Published</x-ui.badge>
+                                @elseif($course->status === 'archived')
+                                <x-ui.badge color="danger">Archived</x-ui.badge>
+                                @else
+                                <x-ui.badge color="gray">Draft</x-ui.badge>
+                                @endif
+                            </span>
+                            @if($course->using_due_date)
+                            <span class="text-blue-600 font-medium">
+                                <x-ui.badge color="brand">Uses Due Date</x-ui.badge>
+                            </span>
                             @endif
                         </div>
                     </div>
@@ -71,7 +78,80 @@
                         </form>
                     </div>
 
-                    <form method="POST" action="{{ route('instructor.courses.assign.store', $course->id) }}">
+                    <form method="POST" action="{{ route('instructor.courses.assign.store', $course->id) }}" x-data="{
+                            showModal: false,
+                            selectedUsers: [],
+                            isDueDateCourse: {{ $course->using_due_date ? 'true' : 'false' }},
+
+                            handleAssignClick() {
+                                // 1. Kumpulkan semua user yang tercentang
+                                const checkedUsers = document.querySelectorAll('.chk-user:checked');
+                                if (checkedUsers.length === 0) {
+                                    if (typeof Swal !== 'undefined') {
+                                        Swal.fire('Error', 'Pilih minimal satu student.', 'error');
+                                    } else {
+                                        alert('Pilih minimal satu student.');
+                                    }
+                                    return;
+                                }
+
+                                // 2. Jika course TIDAK pakai due date, langsung submit form
+                                if (!this.isDueDateCourse) {
+                                    this.$refs.assignForm.submit();
+                                    return;
+                                }
+
+                                // 3. Jika pakai due date, siapkan data untuk modal
+                                this.selectedUsers = [];
+                                checkedUsers.forEach(cb => {
+                                    this.selectedUsers.push({
+                                        id: cb.value,
+                                        name: cb.dataset.name
+                                    });
+                                });
+
+                                // 4. Tampilkan modal
+                                this.showModal = true;
+                            },
+
+                            // ====== 2. FUNGSI VALIDASI CLIENT-SIDE ======
+                            validateAndSubmitDueDateForm() {
+                                let allValid = true;
+
+                                for (const user of this.selectedUsers) {
+                                    const startDateInput = this.$refs.assignForm.querySelector(`#start_date_${user.id}`);
+                                    const endDateInput = this.$refs.assignForm.querySelector(`#end_date_${user.id}`);
+
+                                    // Reset style error
+                                    startDateInput.style.borderColor = '';
+                                    endDateInput.style.borderColor = '';
+
+                                    // Validasi start_date
+                                    if (!startDateInput.value) {
+                                        allValid = false;
+                                        startDateInput.style.borderColor = 'red';
+                                    }
+
+                                    // Validasi end_date
+                                    if (!endDateInput.value) {
+                                        allValid = false;
+                                        endDateInput.style.borderColor = 'red';
+                                    }
+                                }
+
+                                if (allValid) {
+                                    // Jika semua valid, submit form
+                                    this.$refs.assignForm.submit();
+                                } else {
+                                    // Jika ada yang kosong, tampilkan alert
+                                    if (typeof Swal !== 'undefined') {
+                                        Swal.fire('Input Required', 'Semua Start Date dan End Date wajib diisi.', 'error');
+                                    } else {
+                                        alert('Semua Start Date dan End Date wajib diisi.');
+                                    }
+                                }
+                            }
+                        }" x-ref="assignForm">
                         @csrf
                         <div class="p-4 overflow-x-auto">
                             <table class="min-w-full text-sm text-left divide-y divide-soft">
@@ -90,7 +170,7 @@
                                     <tr class="hover:bg-gray-50">
                                         <td class="px-3 py-2">
                                             <input type="checkbox" name="user_ids[]" value="{{ $u->id }}"
-                                                class="chk-user rounded border-soft">
+                                                data-name="{{ $u->name }}" class="chk-user rounded border-soft">
                                         </td>
                                         <td class="px-3 py-2 text-dark font-medium">{{ $u->name }}</td>
                                         <td class="px-3 py-2 text-dark/70">{{ $u->email }}</td>
@@ -112,8 +192,85 @@
 
                         <div class="p-4 border-t border-soft flex items-center justify-between">
                             <div class="text-xs text-dark/60">Pilih beberapa lalu klik “Assign Selected”.</div>
-                            <x-ui.button type="submit" color="brand">Assign Selected</x-ui.button>
+                            <x-ui.button type="button" color="brand" @click="handleAssignClick()">
+                                Assign Selected
+                            </x-ui.button>
                         </div>
+
+
+                        <div x-show="showModal" style="display: none;" @keydown.escape.window="showModal = false"
+                            class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog"
+                            aria-modal="true">
+                            <div
+                                class="flex items-end justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+                                <div x-show="showModal" x-transition:enter="ease-out duration-300"
+                                    x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                                    x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75"
+                                    @click="showModal = false" aria-hidden="true"></div>
+
+                                <span class="hidden sm:inline-block sm:align-middle sm:h-screen"
+                                    aria-hidden="true">&#8203;</span>
+                                <div x-show="showModal" x-transition:enter="ease-out duration-300"
+                                    x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                    x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                                    x-transition:leave="ease-in duration-200"
+                                    x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                                    x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                                    class="inline-block w-full max-w-lg p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
+
+                                    <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">
+                                        Set Due Dates
+                                    </h3>
+                                    <p class="text-sm text-gray-500 mt-1">
+                                        Kursus ini mewajibkan Start Date dan End Date untuk setiap pendaftaran.
+                                    </p>
+
+                                    <div class="mt-4 space-y-4 max-h-96 overflow-y-auto p-1">
+                                        <template x-for="user in selectedUsers" :key="user.id">
+                                            <div class="p-3 border rounded-lg bg-gray-50">
+                                                <strong class="block text-sm font-medium text-gray-900"
+                                                    x-text="user.name"></strong>
+
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                                                    <div>
+                                                        <label :for="'start_date_' + user.id"
+                                                            class="block text-xs font-medium text-gray-600">Start
+                                                            Date</label>
+                                                        <input type="date" :id="'start_date_' + user.id"
+                                                            :name="'due_dates[' + user.id + '][start_date]'"
+                                                            class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand focus:border-brand"
+                                                            required>
+                                                    </div>
+                                                    <div>
+                                                        <label :for="'end_date_' + user.id"
+                                                            class="block text-xs font-medium text-gray-600">End
+                                                            Date</label>
+                                                        <input type="date" :id="'end_date_' + user.id"
+                                                            :name="'due_dates[' + user.id + '][end_date]'"
+                                                            class="mt-1 block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-brand focus:border-brand"
+                                                            required>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <div class="mt-6 sm:flex sm:flex-row-reverse">
+                                        <x-ui.button type="button" color="brand" class="w-full sm:w-auto sm:ml-3"
+                                            @click="validateAndSubmitDueDateForm()">
+                                            Assign & Set Dates
+                                        </x-ui.button>
+                                        <x-ui.button type="button" color="gray" @click="showModal = false"
+                                            class="w-full mt-3 sm:w-auto sm:mt-0">
+                                            Cancel
+                                        </x-ui.button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </form>
                 </x-ui.card>
 
@@ -130,6 +287,10 @@
                                 <tr>
                                     <th class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">Name</th>
                                     <th class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">Email</th>
+                                    @if($course->using_due_date)
+                                        <th class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">Start Date</th>
+                                        <th class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">End Date</th>
+                                    @endif
                                     <th class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">Status</th>
                                     <th class="px-3 py-2 text-right text-xs font-semibold text-gray-600 uppercase">
                                         Action</th>
@@ -140,6 +301,14 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="px-3 py-2 text-dark font-medium">{{ $en->user->name }}</td>
                                     <td class="px-3 py-2 text-dark/70">{{ $en->user->email }}</td>
+                                    @if($course->using_due_date)
+                                        <td class="px-3 py-2 text-dark/70">
+                                            {{ $en->dueDate ? \Carbon\Carbon::parse($en->dueDate->start_date)->format('d M Y') : '-' }}
+                                        </td>
+                                        <td class="px-3 py-2 text-dark/70">
+                                            {{ $en->dueDate ? \Carbon\Carbon::parse($en->dueDate->end_date)->format('d M Y') : '-' }}
+                                        </td>
+                                    @endif
                                     <td class="px-3 py-2">
                                         @if($en->status === 'active')
                                         <x-ui.badge color="brand">Active</x-ui.badge>
@@ -160,7 +329,10 @@
                                             @method('DELETE')
                                             <button type="submit"
                                                 class="inline-flex items-center justify-center font-semibold rounded-lg px-3 py-1.5 text-sm bg-danger text-white hover:brightness-95">
-                                                Remove
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                                <span class="ml-1">Remove</span>
                                             </button>
                                         </form>
                                     </td>

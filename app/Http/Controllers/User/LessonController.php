@@ -7,6 +7,7 @@ use App\Models\Lms\Course;
 use App\Models\Lms\Lesson;
 use App\Models\Lms\LessonProgress;
 use App\Models\Lms\Module;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -110,7 +111,18 @@ class LessonController extends Controller
             ->where('lesson_id', $lesson->id)
             ->first();
 
-        // 5. Kirim ke View (TANPA $content)
+        // 5. Log activity
+        UserActivityLog::create([
+            'user_id' => Auth::id(),
+            'activity_type' => 'view_lesson',
+            'subject_type' => Lesson::class,
+            'subject_id' => $lesson->id,
+            'description' => "Viewed lesson: {$lesson->title} in course: {$course->title}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        // 6. Kirim ke View (TANPA $content)
         // Blade akan membaca properti langsung dari $lesson
         return view('user.lessons.show', compact(
             'course',
@@ -235,6 +247,17 @@ class LessonController extends Controller
         $progress->status = 'completed';
         $progress->completed_at = now();
         $progress->save();
+
+        // Log activity
+        UserActivityLog::create([
+            'user_id' => $user->id,
+            'activity_type' => 'complete_lesson',
+            'subject_type' => Lesson::class,
+            'subject_id' => $lesson->id,
+            'description' => "Completed lesson: {$lesson->title} in course: {$course->title}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
 
         return response()->json([
             'status' => 'success',

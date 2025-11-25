@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Lms\Course;
+use App\Models\Lms\Enrollment;
+use App\Models\Lms\LessonProgress;
+use App\Models\Lms\QuizAttempt;
+use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
-// use App\Models\Enrollment;
-// use App\Models\LessonProgress;
 
 class CourseProgressController extends Controller
 {
@@ -156,6 +159,74 @@ class CourseProgressController extends Controller
             'moduleBreakdown',
             'students',
             'enrollments' // Pass paginator
+        ));
+    }
+
+    /**
+     * Show detailed progress for a specific student (Admin has access to all courses)
+     */
+    public function showStudent(Course $course, User $student)
+    {
+        // Admin can access any course, no ownership check needed
+
+        // Get enrollment
+        $enrollment = Enrollment::where('course_id', $course->id)
+            ->where('user_id', $student->id)
+            ->with(['dueDate'])
+            ->firstOrFail();
+
+        // Get quiz attempts (Pretest & Posttest)
+        $pretestAttempts = [];
+        $posttestAttempts = [];
+
+        if ($course->pretest) {
+            $pretestAttempts = QuizAttempt::where('quiz_id', $course->pretest->id)
+                ->where('user_id', $student->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        if ($course->posttest) {
+            $posttestAttempts = QuizAttempt::where('quiz_id', $course->posttest->id)
+                ->where('user_id', $student->id)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        // Get lesson progress
+        $lessonProgress = LessonProgress::where('enrollment_id', $enrollment->id)
+            ->with('lesson.module')
+            ->orderBy('last_activity_at', 'desc')
+            ->get();
+
+        // Get activity logs for this student in this course
+        $activityLogs = UserActivityLog::where('user_id', $student->id)
+            ->where(function ($q) use ($course) {
+                $q->where(function ($qq) use ($course) {
+                    $qq->where('subject_type', Course::class)
+                       ->where('subject_id', $course->id);
+                })
+                ->orWhereIn('subject_id', $course->lessons()->pluck('id'))
+                ->orWhereIn('subject_id', function ($query) use ($course) {
+                    $query->select('id')
+                        ->from('quizzes')
+                        ->where('quizzable_type', Course::class)
+                        ->where('quizzable_id', $course->id);
+                });
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(50)
+            ->get();
+
+        // Use admin-specific view
+        return view('admin.pages.courses.student-progress', compact(
+            'course',
+            'student',
+            'enrollment',
+            'pretestAttempts',
+            'posttestAttempts',
+            'lessonProgress',
+            'activityLogs'
         ));
     }
 }

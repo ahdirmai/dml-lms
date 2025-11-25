@@ -430,6 +430,7 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
             'kind' => \App\Models\Lms\Quiz::KIND_PRETEST,
             'store_route' => route('admin.courses.pretest.store', $course->id),
             'existing' => method_exists($course,'pretest') ? $course->pretest : null,
+            'routePrefix' => 'admin',
             ])
         </div>
 
@@ -439,6 +440,7 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
             'kind' => \App\Models\Lms\Quiz::KIND_POSTTEST,
             'store_route' => route('admin.courses.posttest.store', $course->id),
             'existing' => method_exists($course,'posttest') ? $course->posttest : null,
+            'routePrefix' => 'admin',
             ])
         </div>
         @endif

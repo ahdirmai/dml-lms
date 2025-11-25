@@ -1,4 +1,4 @@
-{{-- resources/views/instructor/pages/courses/progress.blade.php --}}
+{{-- resources/views/admin/pages/courses/progress.blade.php --}}
 <x-app-layout :title="'Progress — ' . $course->title">
     <x-slot name="header">
         <div class="flex items-center justify-between">
@@ -13,85 +13,7 @@
         class="inline-flex items-center justify-center font-semibold rounded-lg border px-4 py-2 text-sm text-dark hover:bg-soft">
         ← Back to Course Management
     </a>
-    @php
-    /**
-    * ============================
-    * DUMMY DATA (sementara)
-    * ============================
-    *
-    * TODO (REAL DATA - gunakan Eloquent):
-    * - $enrollments = $course->enrollments()
-    * ->with(['user:id,name,email', 'course'])
-    * ->withCount(['course as lessons_total' => fn($q) => $q->selectRaw('(select count(*) from lessons where
-    lessons.module_id in (...))')]) // contoh
-    * ->paginate(10);
-    *
-    * - $moduleBreakdown = $course->modules()
-    * ->withCount('lessons')
-    * ->with(['lessons' => fn($q) => $q->select('id','module_id','title')])
-    * ->get();
-    *
-    * - $progressByUser = LessonProgress::whereIn('enrollment_id', $enrollments->pluck('id'))
-    * ->selectRaw('enrollment_id, count(*) filter(where status="completed") as completed, count(*) as total')
-    * ->groupBy('enrollment_id')->get();
-    *
-    * Catatan PRD (ringkas): simpan progress per lesson di tabel `lesson_progress` (not_started|in_progress|completed),
-    * hitung persentase = completed/total * 100, tandai course completed => generate certificate. (PRD—Progress
-    Tracking)
-    */
 
-    $summary = [
-    'students_total' => 42,
-    'students_active' => 31,
-    'students_completed' => 9,
-    'avg_progress' => 57, // %
-    ];
-
-    $moduleBreakdown = [
-    ['id' => 1, 'title' => 'Introduction', 'lessons_total' => 5, 'lessons_completed' => 3],
-    ['id' => 2, 'title' => 'Fundamentals', 'lessons_total' => 8, 'lessons_completed' => 4],
-    ['id' => 3, 'title' => 'Advanced Topics', 'lessons_total' => 6, 'lessons_completed' => 2],
-    ];
-
-    $students = [
-    [
-    'name' => 'Asep Nugraha',
-    'email' => 'asep@example.com',
-    'status' => 'active', // assigned|active|completed|cancelled
-    'progress' => 72,
-    'completed_lessons' => 13,
-    'total_lessons' => 18,
-    'last_activity' => '2025-11-03 14:12',
-    ],
-    [
-    'name' => 'Dewi Lestari',
-    'email' => 'dewi@example.com',
-    'status' => 'assigned',
-    'progress' => 0,
-    'completed_lessons' => 0,
-    'total_lessons' => 18,
-    'last_activity' => null,
-    ],
-    [
-    'name' => 'Budi Santoso',
-    'email' => 'budi@example.com',
-    'status' => 'completed',
-    'progress' => 100,
-    'completed_lessons' => 18,
-    'total_lessons' => 18,
-    'last_activity' => '2025-11-02 09:44',
-    ],
-    [
-    'name' => 'Siti Rahma',
-    'email' => 'siti@example.com',
-    'status' => 'active',
-    'progress' => 35,
-    'completed_lessons' => 6,
-    'total_lessons' => 17,
-    'last_activity' => '2025-11-04 10:01',
-    ],
-    ];
-    @endphp
 
     <div class="">
         <div class="mx-auto max-w-7xl space-y-4">
@@ -131,7 +53,7 @@
                 </x-ui.card>
             </div>
 
-            {{-- Filters --}}
+    {{-- Filters --}}
             <x-ui.card class="p-4">
                 <form method="GET" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                     <x-ui.input name="q" :value="request('q')" placeholder="Search student name/email" />
@@ -163,7 +85,7 @@
             <x-ui.card class="p-0 overflow-hidden">
                 <div class="p-4 border-b border-soft">
                     <div class="text-sm font-semibold text-dark">Module Breakdown</div>
-                    <div class="text-xs text-dark/60">Ringkasan jumlah lesson selesai vs total per modul</div>
+                    <div class="text-xs text-dark/60">Average completion per module across all students</div>
                 </div>
                 <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     @foreach($moduleBreakdown as $m)
@@ -173,7 +95,7 @@
                     <div class="rounded-xl border border-soft p-4">
                         <div class="font-semibold text-dark">{{ $m['title'] }}</div>
                         <div class="text-xs text-dark/60 mb-2">
-                            {{ $m['lessons_completed'] }} / {{ $m['lessons_total'] }} lessons
+                            Avg {{ $m['lessons_completed'] }} / {{ $m['lessons_total'] }} lessons
                         </div>
                         <div class="w-full h-2 bg-soft rounded-full overflow-hidden">
                             <div class="h-2 bg-accent rounded-full" style="width: {{ $pct }}%"></div>
@@ -212,9 +134,14 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
-                            @foreach($students as $s)
+                            @forelse($students as $s)
                             <tr class="hover:bg-gray-50">
-                                <td class="px-3 py-2 text-dark font-medium">{{ $s['name'] }}</td>
+                                <td class="px-3 py-2 text-dark font-medium">
+                                    <a href="{{ route('instructor.courses.students.progress', [$course->id, $s['id']]) }}" 
+                                       class="text-brand hover:text-brand/80 hover:underline">
+                                        {{ $s['name'] }}
+                                    </a>
+                                </td>
                                 <td class="px-3 py-2 text-dark/70">{{ $s['email'] }}</td>
                                 <td class="px-3 py-2">
                                     @if($s['status'] === 'active')
@@ -244,17 +171,20 @@
                                     : '—' }}
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr>
+                                <td colspan="6" class="px-3 py-4 text-center text-dark/60">No students found.</td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
 
-                    {{-- TODO (REAL DATA): gunakan $enrollments->links() jika pagination --}}
-                    {{-- <div class="mt-4">{{ $enrollments->withQueryString()->links() }}</div> --}}
+                    <div class="mt-4">{{ $enrollments->withQueryString()->links() }}</div>
                 </div>
             </div>
 
             {{-- Notes / Align dengan PRD --}}
-            <x-ui.card class="p-4">
+            {{-- <x-ui.card class="p-4">
                 <div class="text-sm text-dark/80">
                     <div class="font-semibold mb-1">Catatan Implementasi (sesuai PRD — Progress Tracking)</div>
                     <ul class="list-disc list-inside text-dark/70 space-y-1">
@@ -266,7 +196,7 @@
                         <li>Gunakan event (LessonCompleted → Recalculate Course Progress) untuk update realtime.</li>
                     </ul>
                 </div>
-            </x-ui.card>
+            </x-ui.card> --}}
         </div>
     </div>
 </x-app-layout>

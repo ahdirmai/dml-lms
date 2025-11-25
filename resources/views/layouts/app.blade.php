@@ -105,6 +105,13 @@
     ],
     [
     'group' => 'Master Data',
+    'label' => 'User Activity',
+    'icon' => 'clock',
+    'href' => route('admin.user-activity.index'),
+    'active' => request()->routeIs('admin.user-activity.*'),
+    ],
+    [
+    'group' => 'Master Data',
     'label' => 'Role Management',
     'icon' => 'shield-check',
     'href' => route('admin.roles.index'),

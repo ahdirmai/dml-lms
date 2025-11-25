@@ -7,6 +7,7 @@ use App\Models\Lms\Course;
 use App\Models\Lms\Enrollment;
 use App\Models\Lms\QuizAnswer;
 use App\Models\Lms\QuizAttempt;
+use App\Models\UserActivityLog;
 use App\Services\UserCourseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -109,6 +110,17 @@ class CourseController extends Controller
 
         $data['isAccessBlocked'] = $isAccessBlocked;
         $data['accessMessage'] = $accessMessage;
+
+        // Log activity
+        UserActivityLog::create([
+            'user_id' => Auth::id(),
+            'activity_type' => 'view_course',
+            'subject_type' => Course::class,
+            'subject_id' => $course->id,
+            'description' => "Viewed course: {$course->title}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
 
         return view('user.courses.show', $data);
     }
@@ -233,6 +245,18 @@ class CourseController extends Controller
             }
 
             DB::commit(); // Commit the transaction
+            
+            // Log activity
+            UserActivityLog::create([
+                'user_id' => $user->id,
+                'activity_type' => $type === 'pre' ? 'submit_pretest' : 'submit_posttest',
+                'subject_type' => Course::class,
+                'subject_id' => $course->id,
+                'description' => ($type === 'pre' ? 'Submitted pretest' : 'Submitted posttest') . " for course: {$course->title}. Score: {$finalScore}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+            
             $msg = $type === 'pre'
                 ? "Pre-test berhasil disimpan. Nilai Anda: {$finalScore}."
                 : "Post-test berhasil disimpan. Nilai Anda: {$finalScore}.";

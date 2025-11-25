@@ -14,7 +14,7 @@ $orderId = "qm-order-visible-{$K}";
 $correctId = "qm-correct-{$K}";
 $correctId = "qm-correct-{$K}";
 $optionsId = "qm-options-{$K}";
-$prefix = $routePrefix ?? 'admin'; // default to admin if not set
+$prefix = $routePrefix ?? 'instructor'; // default to instructor if not set
 @endphp
 
 <div class="space-y-6">

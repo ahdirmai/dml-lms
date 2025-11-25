@@ -1,4 +1,4 @@
-@props(['color' => 'dark']) {{-- dark|brand|accent|danger|gray --}}
+@props(['color' => 'dark']) {{-- dark|brand|accent|danger|gray|green --}}
 
 @php
 $map = [
@@ -7,6 +7,7 @@ $map = [
 'brand' => 'bg-brand/10 text-brand border-brand/20',
 'accent' => 'bg-accent/10 text-accent border-accent/20',
 'danger' => 'bg-danger/10 text-danger border-danger/20',
+'green' => 'bg-green-100 text-green-800 border-green-200',
 ];
 @endphp
 

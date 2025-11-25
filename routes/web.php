@@ -115,6 +115,7 @@ Route::prefix('admin')
 
         // RBAC
         Route::resource('users', UsersController::class)->except(['show']);
+        Route::get('user-activity', [\App\Http\Controllers\Admin\UserActivityController::class, 'index'])->name('user-activity.index');
 
         Route::prefix('integrations')->name('integration.')->group(function () {
 
@@ -194,6 +195,7 @@ Route::prefix('admin')
 
         // Progress
         Route::get('courses/{course}/progress', [AdminCourseProgressController::class, 'show'])->name('courses.progress');
+        Route::get('courses/{course}/students/{student}/progress', [AdminCourseProgressController::class, 'showStudent'])->name('courses.students.progress');
     });
 
 /*
@@ -205,7 +207,7 @@ Route::prefix('instructor')
     ->name('instructor.')
     ->middleware(['auth', 'role.active:instructor'])
     ->group(function () {
-        Route::get('/dashboard', fn () => view('dashboard'))->middleware(['auth', 'verified'])->name('dashboard');
+        Route::get('/dashboard', [\App\Http\Controllers\Instructor\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
         Route::resource('categories', CategoryController::class)->except(['show']);
         Route::resource('tags', TagController::class)->except(['show']);
@@ -237,6 +239,16 @@ Route::prefix('instructor')
         Route::patch('questions/{question}', [InstructorQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
         Route::delete('questions/{question}', [InstructorQuizController::class, 'destroyQuestion'])->name('quizzes.questions.destroy');
 
+        // === Pre/Posttest Store ===
+        Route::post('courses/{course}/pretest', [InstructorQuizController::class, 'storePretest'])->name('courses.pretest.store');
+        Route::post('courses/{course}/posttest', [InstructorQuizController::class, 'storePosttest'])->name('courses.posttest.store');
+
+        Route::post('courses/{course}/posttest/copy-from-pretest', [InstructorQuizController::class, 'syncFromPretest'])
+            ->name('courses.posttest.copyFromPretest');
+
+        Route::post('courses/{course}/quizzes/{kind}/import', [InstructorQuizController::class, 'importByKind'])
+            ->name('courses.quizzes.import');
+
         // Assignments
         Route::get('courses/{course}/assign-students', [InstructorCourseAssignController::class, 'form'])->name('courses.assign');
         Route::post('courses/{course}/assign-students', [InstructorCourseAssignController::class, 'store'])->name('courses.assign.store');
@@ -244,6 +256,7 @@ Route::prefix('instructor')
 
         // Progress
         Route::get('courses/{course}/progress', [InstructorCourseProgressController::class, 'show'])->name('courses.progress');
+        Route::get('courses/{course}/students/{student}/progress', [InstructorCourseProgressController::class, 'showStudent'])->name('courses.students.progress');
     });
 
 /*

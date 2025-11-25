@@ -136,7 +136,12 @@
                         <tbody class="divide-y divide-gray-200 bg-white">
                             @forelse($students as $s)
                             <tr class="hover:bg-gray-50">
-                                <td class="px-3 py-2 text-dark font-medium">{{ $s['name'] }}</td>
+                                <td class="px-3 py-2 text-dark font-medium">
+                                    <a href="{{ route('admin.courses.students.progress', [$course->id, $s['id']]) }}" 
+                                       class="text-brand hover:text-brand/80 hover:underline">
+                                        {{ $s['name'] }}
+                                    </a>
+                                </td>
                                 <td class="px-3 py-2 text-dark/70">{{ $s['email'] }}</td>
                                 <td class="px-3 py-2">
                                     @if($s['status'] === 'active')

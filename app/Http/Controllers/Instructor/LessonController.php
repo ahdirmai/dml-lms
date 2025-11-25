@@ -56,6 +56,7 @@ class LessonController extends Controller
                 'content_url'      => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
                 'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
+                'duration_seconds' => $request->input('duration_seconds', 0),
                 'order'            => $nextOrder,
             ]);
 
@@ -104,7 +105,9 @@ class LessonController extends Controller
                 'kind'             => $data['kind'],
                 'content_url'      => $data['content_url'] ?? null,
                 'youtube_video_id' => $ids['youtube_video_id'] ?? null,
+                'youtube_video_id' => $ids['youtube_video_id'] ?? null,
                 'gdrive_file_id'   => $ids['gdrive_file_id'] ?? null,
+                'duration_seconds' => $request->input('duration_seconds', 0),
             ]);
 
             DB::commit();

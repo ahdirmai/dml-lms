@@ -12,6 +12,9 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\Lms\Course;
+use App\Imports\QuizQuestionsImport;
+use Maatwebsite\Excel\Facades\Excel as FacadesExcel;
 use Throwable;
 
 class QuizController extends Controller
@@ -209,5 +212,172 @@ class QuizController extends Controller
         }
         if (is_numeric($correct)) return (int) $correct === $idx;
         return is_string($correct) && trim($correct) === trim($text);
+    }
+
+    // === Pre/Posttest Logic (Copied & Adapted from Admin) ===
+
+    public function storePretest(Request $request, Course $course)
+    {
+        abort_unless($course->instructor_id === Auth::id(), 403);
+        return $this->upsertQuizForCourse($request, $course, 'pretest');
+    }
+
+    public function storePosttest(Request $request, Course $course)
+    {
+        abort_unless($course->instructor_id === Auth::id(), 403);
+        return $this->upsertQuizForCourse($request, $course, 'posttest');
+    }
+
+    private function upsertQuizForCourse(Request $request, Course $course, string $kind)
+    {
+        $data = $request->validate([
+            'title'               => ['required', 'string', 'max:200'],
+            'time_limit_seconds'  => ['nullable', 'integer', 'min:10', 'max:86400'],
+            'shuffle_questions'   => ['nullable', 'boolean'],
+            'shuffle_options'     => ['nullable', 'boolean'],
+            'passing_score'       => ['nullable', 'integer', 'min:0', 'max:100'],
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $quiz = Quiz::query()
+                ->where('quizzable_type', Course::class)
+                ->where('quizzable_id',   $course->id)
+                ->where('quiz_kind',      $kind)
+                ->lockForUpdate()
+                ->first();
+
+            $payload = [
+                'title'               => $data['title'],
+                'time_limit_seconds'  => $data['time_limit_seconds'] ?? null,
+                'shuffle_questions'   => (int) $request->boolean('shuffle_questions'),
+                'shuffle_options'     => (int) $request->boolean('shuffle_options'),
+            ];
+
+            if (array_key_exists('passing_score', $data)) {
+                $payload['passing_score'] = $data['passing_score'];
+            }
+
+            if ($quiz) {
+                $quiz->update($payload);
+            } else {
+                $quiz = Quiz::create(array_merge($payload, [
+                    'id'              => (string) Str::uuid(),
+                    'quiz_kind'       => $kind,
+                    'quizzable_type'  => Course::class,
+                    'quizzable_id'    => $course->id,
+                ]));
+            }
+
+            if ($kind === 'pretest') {
+                $course->update([
+                    'default_passing_score' => $payload['passing_score'],
+                    'pretest_passing_score' => $payload['passing_score']
+                ]);
+            } else {
+                $course->update(['posttest_passing_score' => $payload['passing_score']]);
+            }
+
+            DB::commit();
+            $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
+
+            return redirect()
+                ->route('instructor.courses.edit', [$quiz->quizzable_id, 'tab' => $tab])
+                ->with('success', ucfirst($kind) . ' berhasil disimpan.');
+        } catch (Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menyimpan ' . $kind . ': ' . $e->getMessage());
+        }
+    }
+
+    public function syncFromPretest(Request $request, Course $course)
+    {
+        abort_unless($course->instructor_id === Auth::id(), 403);
+
+        $pretest  = $course->pretest;
+        $posttest = $course->posttest;
+
+        if (!$pretest) return back()->with('error', 'Pretest belum dibuat untuk kursus ini.');
+        if (!$posttest) return back()->with('error', 'Posttest belum dibuat untuk kursus ini.');
+
+        DB::transaction(function () use ($pretest, $posttest) {
+            $postQIds = $posttest->questions()->pluck('id');
+            if ($postQIds->isNotEmpty()) {
+                QuizOption::whereIn('question_id', $postQIds)->delete();
+                QuizQuestion::whereIn('id', $postQIds)->delete();
+            }
+
+            $preQuestions = $pretest->questions()->with('options')->orderBy('order')->get();
+
+            foreach ($preQuestions as $q) {
+                $newQ = QuizQuestion::create([
+                    'id'            => (string) Str::uuid(),
+                    'quiz_id'       => $posttest->id,
+                    'question_text' => $q->question_text,
+                    'points'        => $q->points,
+                    'order'         => $q->order,
+                ]);
+
+                foreach ($q->options as $opt) {
+                    QuizOption::create([
+                        'id'          => (string) Str::uuid(),
+                        'question_id' => $newQ->id,
+                        'option_text' => $opt->option_text,
+                        'is_correct'  => $opt->is_correct,
+                    ]);
+                }
+            }
+            $posttest->total_questions = $pretest->total_questions;
+            $posttest->save();
+        });
+
+        return redirect()->back()->with('success', 'Posttest berhasil disinkronkan dari Pretest.');
+    }
+
+    public function importByKind(Request $request, Course $course, string $kind)
+    {
+        abort_unless($course->instructor_id === Auth::id(), 403);
+
+        $data = $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv'],
+            'replace_existing' => ['nullable', 'boolean'],
+        ]);
+
+        $quiz = Quiz::query()
+            ->where('quizzable_type', Course::class)
+            ->where('quizzable_id', $course->id)
+            ->where('quiz_kind', $kind)
+            ->first();
+
+        if (!$quiz) {
+            return back()->with('error', "Quiz {$kind} belum dibuat untuk kursus ini.");
+        }
+
+        $replace = (bool)($data['replace_existing'] ?? false);
+        $import = new QuizQuestionsImport($quiz, $replace);
+
+        try {
+            FacadesExcel::import($import, $data['file']);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+        }
+
+        $messages = [];
+        foreach ($import->failures() as $failure) {
+            $attr = $failure->attribute();
+            $row  = $failure->row();
+            foreach ($failure->errors() as $err) {
+                $messages[] = "Row {$row} [{$attr}]: {$err}";
+            }
+        }
+        foreach ($import->getCaughtErrors() as $msg) {
+            $messages[] = $msg;
+        }
+
+        if (!empty($messages)) {
+            return back()->with('error', "Beberapa baris gagal diimport:")->with('import_errors', $messages);
+        }
+        return back()->with('success', "Berhasil import pertanyaan untuk {$kind}.");
     }
 }
