@@ -40,4 +40,8 @@ return [
         'token'    => env('INTERNAL_USERS_TOKEN'),
     ],
 
+    'whatsapp' => [
+        'admin_number' => env('WHATSAPP_ADMIN_NUMBER', '6281234567890'),
+    ],
+
 ];
