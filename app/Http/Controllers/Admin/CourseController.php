@@ -279,6 +279,37 @@ class CourseController extends Controller
         }
     }
 
+    public function updateStatus(Request $request, Course $course)
+    {
+        $request->validate([
+            'status' => 'required|in:published,draft',
+        ]);
+
+        if ($request->status === 'published') {
+            return $this->publish($request, $course);
+        }
+
+        try {
+            $course->update(['status' => 'draft']);
+
+            UserActivityLog::create([
+                'user_id' => Auth::id(),
+                'activity_type' => 'unpublish_course',
+                'subject_type' => Course::class,
+                'subject_id' => $course->id,
+                'description' => "Unpublished course: {$course->title}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            return back()->with('success', 'Kursus berhasil diubah menjadi Draft.');
+        } catch (Throwable $e) {
+            Log::error('Gagal unpublish kursus', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'Gagal mengubah status: '.$e->getMessage());
+        }
+    }
+
     /**
      * Publish menggunakan Form POST biasa dan redirect.
      */

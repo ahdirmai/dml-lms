@@ -71,20 +71,28 @@ class CourseController extends Controller
 
         $categories = Category::select('id', 'name')->orderBy('name')->get();
 
+        $stats = [
+            'total' => Course::where('instructor_id', $loggedInInstructorId)->count(),
+            'published' => Course::where('instructor_id', $loggedInInstructorId)->where('status', 'published')->count(),
+            'draft' => Course::where('instructor_id', $loggedInInstructorId)->where('status', 'draft')->count(),
+            'archived' => Course::where('instructor_id', $loggedInInstructorId)->where('status', 'archived')->count(),
+        ];
+
         return view('instructor.pages.courses.index', compact(
             'courses',
             'categories',
             'q',
             'status',
             'categoryId',
-            'sort'
+            'sort',
+            'stats'
         ));
     }
 
     public function create()
     {
         $categories = Category::select('id', 'name')->orderBy('name')->get();
-        $tags       = Tag::select('id', 'name')->orderBy('name')->get();
+        $tags = Tag::select('id', 'name')->orderBy('name')->get();
 
         return view('instructor.pages.courses.create-builder', compact('categories', 'tags'));
     }
@@ -101,7 +109,7 @@ class CourseController extends Controller
         ]);
 
         $categories = Category::select('id', 'name')->orderBy('name')->get();
-        $tags       = Tag::select('id', 'name')->orderBy('name')->get();
+        $tags = Tag::select('id', 'name')->orderBy('name')->get();
         $instructors = User::select('id', 'name')->orderBy('name')->get();
 
         return view('instructor.pages.courses.create-builder', compact('categories', 'instructors', 'course', 'tags'));
@@ -283,6 +291,37 @@ class CourseController extends Controller
             return back()
                 ->withInput()
                 ->with('error', 'Terjadi kesalahan saat memperbarui kursus: '.$e->getMessage());
+        }
+    }
+
+    public function updateStatus(Request $request, Course $course)
+    {
+        $request->validate([
+            'status' => 'required|in:published,draft',
+        ]);
+
+        if ($request->status === 'published') {
+            return $this->publish($request, $course);
+        }
+
+        try {
+            $course->update(['status' => 'draft']);
+
+            UserActivityLog::create([
+                'user_id' => Auth::id(),
+                'activity_type' => 'unpublish_course',
+                'subject_type' => Course::class,
+                'subject_id' => $course->id,
+                'description' => "Unpublished course: {$course->title}",
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+            ]);
+
+            return back()->with('success', 'Kursus berhasil diubah menjadi Draft.');
+        } catch (Throwable $e) {
+            Log::error('Gagal unpublish kursus', ['error' => $e->getMessage()]);
+
+            return back()->with('error', 'Gagal mengubah status: '.$e->getMessage());
         }
     }
 

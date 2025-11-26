@@ -42,8 +42,15 @@
         <div class="relative">
             <button id="avatarBtn"
                 class="flex items-center focus:outline-none focus:ring-2 focus:ring-brand rounded-full">
-                <img src="{{ $avatar ?? 'https://via.placeholder.com/40' }}" alt="User Avatar"
+                @if($avatar)
+                <img src="{{ $avatar }}" alt="User Avatar"
                     class="w-10 h-10 rounded-full border-2 border-brand shadow object-cover">
+                @else
+                <div
+                    class="w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center text-sm font-bold border-2 border-brand shadow uppercase">
+                    {{ Str::substr($user->name ?? 'User', 0, 2) }}
+                </div>
+                @endif
             </button>
 
             <div id="dropdownProfile"

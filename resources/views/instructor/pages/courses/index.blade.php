@@ -251,13 +251,44 @@
                                 </td>
 
                                 <td class="px-3 py-2">
-                                    @if($c->status === 'published')
-                                    <x-ui.badge color="brand">Published</x-ui.badge>
-                                    @elseif($c->status === 'archived')
-                                    <x-ui.badge color="danger">Archived</x-ui.badge>
-                                    @else
-                                    <x-ui.badge color="gray">Draft</x-ui.badge>
-                                    @endif
+                                    <div x-data="{ open: false }" class="relative inline-block text-left">
+                                        <button @click="open = !open" @click.away="open = false" type="button" class="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" id="menu-button" aria-expanded="true" aria-haspopup="true">
+                                            @if($c->status === 'published')
+                                                <span class="text-green-600 font-semibold">Published</span>
+                                            @elseif($c->status === 'archived')
+                                                <span class="text-red-600 font-semibold">Archived</span>
+                                            @else
+                                                <span class="text-gray-600 font-semibold">Draft</span>
+                                            @endif
+                                            <svg class="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
+
+                                        <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="origin-top-right absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 focus:outline-none z-10" role="menu" aria-orientation="vertical" aria-labelledby="menu-button" tabindex="-1" style="display: none;">
+                                            <div class="py-1" role="none">
+                                                @if($c->status !== 'published')
+                                                    <form method="POST" action="{{ route('instructor.courses.status.update', $c->id) }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="status" value="published">
+                                                        <button type="submit" class="text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" id="menu-item-0">
+                                                            Set as Published
+                                                        </button>
+                                                    </form>
+                                                @else
+                                                    <form method="POST" action="{{ route('instructor.courses.status.update', $c->id) }}">
+                                                        @csrf
+                                                        @method('PATCH')
+                                                        <input type="hidden" name="status" value="draft">
+                                                        <button type="submit" class="text-gray-700 block w-full text-left px-4 py-2 text-sm hover:bg-gray-100" role="menuitem" tabindex="-1" id="menu-item-1">
+                                                            Set as Draft
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <td class="px-3 py-2">
@@ -326,7 +357,7 @@
             {{-- ===== CARD LIST (Mobile) ===== --}}
             <div class="space-y-3 md:hidden">
                 @forelse($courses as $c)
-                <x-ui.card class="p-4">
+                <div class="bg-white shadow-sm border border-gray-100 rounded-xl p-4">
                     <div class="flex items-start gap-3">
                         <div class="shrink-0 w-20 h-20 bg-gray-100 rounded overflow-hidden">
                             @if($c->thumbnail_path)
@@ -363,6 +394,9 @@
                                 </div>
                                 <div>
                                     <span class="text-dark/60">Students:</span> {{ number_format($c->enrollments_count ?? 0) }}
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-dark/60">By:</span> {{ $c->instructor->name ?? 'N/A' }}
                                 </div>
                             </dl>
                         </div>
@@ -401,7 +435,7 @@
                             </x-slot>
                         </x-dropdown>
                     </div>
-                </x-ui.card>
+                </div>
                 @empty
                 <x-ui.card class="p-6 text-center text-sm text-gray-500">No courses found</x-ui.card>
                 @endforelse

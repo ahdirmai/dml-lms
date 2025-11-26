@@ -149,6 +149,7 @@ Route::prefix('admin')
         Route::post('courses', [AdminCourseController::class, 'store'])->name('courses.store');
         Route::get('courses/{course}/edit', [AdminCourseController::class, 'edit'])->name('courses.edit');
         Route::patch('courses/{course}', [AdminCourseController::class, 'update'])->name('courses.update');
+        Route::patch('courses/{course}/status', [AdminCourseController::class, 'updateStatus'])->name('courses.status.update');
         Route::post('courses/{course}/publish', [AdminCourseController::class, 'publish'])->name('courses.publish');
         Route::delete('courses/{course}', [AdminCourseController::class, 'destroy'])->name('courses.destroy');
 
@@ -220,6 +221,7 @@ Route::prefix('instructor')
         Route::post('courses', [InstructorCourseController::class, 'store'])->name('courses.store');
         Route::get('courses/{course}/edit', [InstructorCourseController::class, 'edit'])->name('courses.edit');
         Route::patch('courses/{course}', [InstructorCourseController::class, 'update'])->name('courses.update');
+        Route::patch('courses/{course}/status', [InstructorCourseController::class, 'updateStatus'])->name('courses.status.update');
         Route::post('courses/{course}/publish', [InstructorCourseController::class, 'publish'])->name('courses.publish');
         Route::delete('courses/{course}', [InstructorCourseController::class, 'destroy'])->name('courses.destroy');
 

@@ -244,6 +244,7 @@
                 'user' => null,
                 'roles' => $roles,
                 'userRoles' => [],
+                'idPrefix' => 'create_',
                 ])
             </div>
         </div>
@@ -267,6 +268,7 @@
                 'user' => null,
                 'roles' => $roles,
                 'userRoles' => [],
+                'idPrefix' => 'edit_',
                 ])
             </div>
         </div>
@@ -311,12 +313,12 @@
         const createForm = modalCreate?.querySelector('form');
         
         // Inputs
-        const cName = modalCreate?.querySelector('#name');
-        const cEmail = modalCreate?.querySelector('#email');
-        const cPwd = modalCreate?.querySelector('#password');
-        const cPwd2 = modalCreate?.querySelector('#password_confirmation');
-        const cRoles = modalCreate?.querySelector('#roles');
-        const cActive = modalCreate?.querySelector('#active_role');
+        const cName = modalCreate?.querySelector('#create_name');
+        const cEmail = modalCreate?.querySelector('#create_email');
+        const cPwd = modalCreate?.querySelector('#create_password');
+        const cPwd2 = modalCreate?.querySelector('#create_password_confirmation');
+        const cRoles = modalCreate?.querySelector('#create_roles');
+        const cActive = modalCreate?.querySelector('#create_active_role');
 
         function clearCreateForm() {
             if (!createForm) return;
@@ -350,12 +352,12 @@
         // ===== Edit Modal Triggers
         const modalEdit = document.getElementById('modalEdit');
         const editForm = modalEdit?.querySelector('form');
-        const eName = modalEdit?.querySelector('#name');
-        const eEmail = modalEdit?.querySelector('#email');
-        const ePwd = modalEdit?.querySelector('#password');
-        const ePwd2 = modalEdit?.querySelector('#password_confirmation');
-        const eRoles = modalEdit?.querySelector('#roles');
-        const eActive = modalEdit?.querySelector('#active_role');
+        const eName = modalEdit?.querySelector('#edit_name');
+        const eEmail = modalEdit?.querySelector('#edit_email');
+        const ePwd = modalEdit?.querySelector('#edit_password');
+        const ePwd2 = modalEdit?.querySelector('#edit_password_confirmation');
+        const eRoles = modalEdit?.querySelector('#edit_roles');
+        const eActive = modalEdit?.querySelector('#edit_active_role');
 
         function ensureMethodPut(form) {
             let m = form.querySelector('input[name="_method"]');
@@ -403,10 +405,10 @@
         });
 
         // ===== Role Picker Logic
-        function initRolePicker(container) {
-            const realSelect = container?.querySelector('#roles');
-            const picker = container?.querySelector('#roles_picker');
-            const badgeContainer = container?.querySelector('#roles_badges');
+        function initRolePicker(container, prefix) {
+            const realSelect = container?.querySelector('#' + prefix + 'roles');
+            const picker = container?.querySelector('#' + prefix + 'roles_picker');
+            const badgeContainer = container?.querySelector('#' + prefix + 'roles_badges');
             
             if (!realSelect || !picker || !badgeContainer) return;
 
@@ -472,13 +474,13 @@
             updateBadges();
         }
 
-        initRolePicker(modalCreate);
-        initRolePicker(modalEdit);
+        initRolePicker(modalCreate, 'create_');
+        initRolePicker(modalEdit, 'edit_');
 
         // ===== Sync Active Role Options (Modified to work with hidden select)
-        function syncActiveRole(container) {
-            const rolesSelect = container?.querySelector('#roles');
-            const activeSelect = container?.querySelector('#active_role');
+        function syncActiveRole(container, prefix) {
+            const rolesSelect = container?.querySelector('#' + prefix + 'roles');
+            const activeSelect = container?.querySelector('#' + prefix + 'active_role');
             
             if (!rolesSelect || !activeSelect) return;
 
@@ -507,8 +509,8 @@
             });
         }
 
-        syncActiveRole(modalCreate);
-        syncActiveRole(modalEdit);
+        syncActiveRole(modalCreate, 'create_');
+        syncActiveRole(modalEdit, 'edit_');
 
     })();
     </script>
