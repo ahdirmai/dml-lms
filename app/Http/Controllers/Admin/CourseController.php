@@ -8,6 +8,7 @@ use App\Models\Lms\Category;
 use App\Models\Lms\Course;
 use App\Models\Lms\Tag;
 use App\Models\User;
+use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
