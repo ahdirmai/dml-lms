@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Instructor;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\StoreTagRequest;
-use App\Http\Requests\Admin\UpdateTagRequest;
+use App\Http\Requests\Instructor\StoreTagRequest;
+use App\Http\Requests\Instructor\UpdateTagRequest;
 use App\Models\Lms\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,8 +19,7 @@ class TagController extends Controller
         $tags = Tag::query()
             ->when(
                 $q,
-                fn($qr) =>
-                $qr->where('name', 'like', "%{$q}%")
+                fn ($qr) => $qr->where('name', 'like', "%{$q}%")
                     ->orWhere('slug', 'like', "%{$q}%")
             )
             ->orderBy('created_at', 'desc')
@@ -48,7 +47,7 @@ class TagController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'Tag created.',
-                    'tag'     => $tag = Tag::where('name', $request->name)->first()
+                    'tag' => $tag = Tag::where('name', $request->name)->first(),
                 ]);
             }
 
@@ -61,13 +60,13 @@ class TagController extends Controller
             if ($request->wantsJson()) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to create tag: ' . $e->getMessage()
+                    'message' => 'Failed to create tag: '.$e->getMessage(),
                 ], 500);
             }
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create tag: ' . $e->getMessage());
+                ->with('error', 'Failed to create tag: '.$e->getMessage());
         }
     }
 
@@ -93,7 +92,7 @@ class TagController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to update tag: ' . $e->getMessage());
+                ->with('error', 'Failed to update tag: '.$e->getMessage());
         }
     }
 
@@ -116,7 +115,7 @@ class TagController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            return back()->with('error', 'Failed to delete tag: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete tag: '.$e->getMessage());
         }
     }
 }

@@ -246,30 +246,6 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                         required>{{ old('description', $course->description ?? '') }}</textarea>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori</label>
-                    <select name="category_id" id="category_id"
-                        class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
-                        required>
-                        <option value="" disabled selected>Pilih kategori</option>
-                        @php $currentCategoryId = $course->categories[0]->id ?? old('category_id'); @endphp
-                        @foreach ($categories as $cat)
-                        <option value="{{ $cat->id }}" @selected($currentCategoryId===$cat->id)>{{ $cat->name }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Level</label>
-                    {{-- tetap "level" (controller fallback ke difficulty) --}}
-                    <select name="level" id="level"
-                        class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent">
-                        @php $currentLevel = $course->difficulty ?? old('level', 'intermediate'); @endphp
-                        <option value="beginner" @selected($currentLevel==='beginner' )>Beginner</option>
-                        <option value="intermediate" @selected($currentLevel==='intermediate' )>Intermediate</option>
-                        <option value="advanced" @selected($currentLevel==='advanced' )>Advanced</option>
-                    </select>
-                </div>
-                <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Instruktur</label>
                     <select name="instructor_id" id="instructor_id"
                         class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
@@ -279,6 +255,38 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                         @foreach ($instructors as $usr)
                         <option value="{{ $usr->id }}" @selected($currentInstructorId===$usr->id)>{{ $usr->name }}
                         </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori</label>
+                    <select name="category_id" id="category_id"
+                        class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
+                        required>
+                        <option value="" disabled selected>Pilih kategori</option>
+                        @php
+                            $currentCategoryId = $course->categories[0]->id ?? old('category_id');
+                            // Collect instructor IDs for checking default categories
+                            $instructorIds = $instructors->pluck('id')->toArray();
+                        @endphp
+                        @foreach ($categories as $cat)
+                            @php
+                                // Default = created_by is NULL OR creator has 'admin' role
+                                // Instructor = created_by is in instructor list AND NOT admin
+                                
+                                $creator = $cat->createdBy;
+                                $isAdmin = $creator && $creator->roles->contains('name', 'admin');
+                                $isDefault = !$cat->created_by || $isAdmin;
+                                
+                                // Only treat as instructor category if NOT default
+                                $isInstructorCat = !$isDefault && in_array($cat->created_by, $instructorIds);
+                            @endphp
+                            <option value="{{ $cat->id }}"
+                                data-created-by="{{ $cat->created_by }}"
+                                data-is-instructor="{{ $isInstructorCat ? '1' : '0' }}"
+                                @selected($currentCategoryId===$cat->id)>
+                                {{ $cat->name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -295,6 +303,7 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                         @php
                             $currentTags = isset($course) ? $course->tags->pluck('id')->toArray() : old('tags', []);
                         @endphp
+                        {{-- DEBUG: {{ json_encode($currentTags) }} --}}
                         @foreach ($tags as $tag)
                             <option value="{{ $tag->id }}" @selected(in_array($tag->id, $currentTags))>{{ $tag->name }}</option>
                         @endforeach
@@ -1098,5 +1107,57 @@ document.addEventListener("DOMContentLoaded", () => {
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 })();
+  // --- Category Filtering Logic ---
+  const instructorSelect = document.getElementById('instructor_id');
+  const categorySelect   = document.getElementById('category_id');
+
+  if (instructorSelect && categorySelect) {
+      function filterCategories() {
+          const selectedInstructorId = instructorSelect.value;
+          const options = categorySelect.querySelectorAll('option');
+          let firstVisible = null;
+          let currentSelectedStillVisible = false;
+
+          options.forEach(opt => {
+              if (opt.value === "") return; // Skip placeholder
+
+              const createdBy = opt.getAttribute('data-created-by');
+              const isInstructorCat = opt.getAttribute('data-is-instructor') === '1';
+
+              // Logic:
+              // Show if:
+              // 1. It's a default category (not created by ANY instructor in the list)
+              // 2. OR it was created by the SELECTED instructor
+              
+              // Note: If createdBy is empty/null, it's definitely default.
+              // If createdBy is not in our instructor list, it's also treated as default (global admin category).
+              
+              const isDefault = !isInstructorCat;
+              const isOwnedBySelected = (createdBy === selectedInstructorId);
+
+              if (isDefault || isOwnedBySelected) {
+                  opt.style.display = '';
+                  opt.disabled = false; // Ensure it's selectable
+                  if (!firstVisible) firstVisible = opt;
+                  if (opt.selected) currentSelectedStillVisible = true;
+              } else {
+                  opt.style.display = 'none';
+                  opt.disabled = true; // Prevent selection via keyboard/scripts
+                  if (opt.selected) opt.selected = false;
+              }
+          });
+
+          // If the previously selected option is now hidden, select the first visible one or reset
+          if (!currentSelectedStillVisible && selectedInstructorId) {
+              categorySelect.value = ""; // Reset to placeholder
+          }
+      }
+
+      instructorSelect.addEventListener('change', filterCategories);
+      
+      // Run on load to handle Edit mode or old input
+      filterCategories();
+  }
+
 });
 </script>

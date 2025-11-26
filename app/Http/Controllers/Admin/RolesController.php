@@ -24,7 +24,12 @@ class RolesController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('admin.pages.roles.index', compact('roles', 'q'));
+        $permissions = Permission::query()
+            ->where('guard_name', 'web')
+            ->orderBy('name')
+            ->pluck('name');
+
+        return view('admin.pages.roles.index', compact('roles', 'q', 'permissions'));
     }
 
     public function create()

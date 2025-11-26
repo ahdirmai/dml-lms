@@ -40,7 +40,7 @@ class CourseController extends Controller
 
         $courses = Course::query()
             ->with(['categories:id,name', 'instructor:id,name'])
-            ->withCount(['modules', 'lessons'])
+            ->withCount(['modules', 'lessons', 'enrollments'])
             ->where('instructor_id', $loggedInInstructorId) // Filter by logged-in instructor
             ->when($q, function ($qq) use ($q) {
                 $qq->where(function ($w) use ($q) {

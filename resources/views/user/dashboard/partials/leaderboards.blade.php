@@ -30,9 +30,10 @@ $position = $userInfo['position'] ?? '';
             @php
             $rankOrderClass = $rank === 2 ? 'order-1' : ($rank === 1 ? 'order-2' : 'order-3');
             $scoreClass = $rank === 1 ? 'score-rank-1' : ($rank === 2 ? 'score-rank-2' : 'score-rank-3');
+            $offsetClass = $rank === 1 ? '-mt-6' : '';
             $nameDisplay = explode(' ', $item['name'])[0] ?? 'User';
             @endphp
-            <div class="flex flex-col items-center w-1/3 text-center p-2 {{ $rankOrderClass }}">
+            <div class="flex flex-col items-center w-1/3 text-center p-2 {{ $rankOrderClass }} {{ $offsetClass }}">
                 <i data-lucide="rocket" class="w-8 h-8 text-accent mb-1"></i>
                 <p class="font-medium text-xs text-gray-700">{{ $nameDisplay }}</p>
                 <div class="text-[0.65rem] font-medium text-accent font-bold">
@@ -79,9 +80,10 @@ $position = $userInfo['position'] ?? '';
             @php
             $rankOrderClass = $rank === 2 ? 'order-1' : ($rank === 1 ? 'order-2' : 'order-3');
             $scoreClass = $rank === 1 ? 'score-rank-1' : ($rank === 2 ? 'score-rank-2' : 'score-rank-3');
+            $offsetClass = $rank === 1 ? '-mt-6' : '';
             $nameDisplay = explode(' ', $item['name'])[0] ?? 'User';
             @endphp
-            <div class="flex flex-col items-center w-1/3 text-center p-2 {{ $rankOrderClass }}">
+            <div class="flex flex-col items-center w-1/3 text-center p-2 {{ $rankOrderClass }} {{ $offsetClass }}">
                 <i data-lucide="trophy" class="w-8 h-8 text-brand mb-1"></i>
                 <p class="font-medium text-xs text-gray-700">{{ $nameDisplay }}</p>
                 <div class="text-[0.65rem] font-medium text-gray-500">

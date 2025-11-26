@@ -19,8 +19,7 @@ class CategoryController extends Controller
         $categories = Category::query()
             ->when(
                 $q,
-                fn($qr) =>
-                $qr->where('name', 'like', "%{$q}%")
+                fn ($qr) => $qr->where('name', 'like', "%{$q}%")
                     ->orWhere('slug', 'like', "%{$q}%")
             )
             ->where('created_by', Auth::id())
@@ -56,13 +55,14 @@ class CategoryController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create category: ' . $e->getMessage());
+                ->with('error', 'Failed to create category: '.$e->getMessage());
         }
     }
 
     public function edit(Category $category)
     {
         abort_unless($category->created_by === Auth::id(), 403);
+
         return view('instructor.pages.categories.edit', compact('category'));
     }
 
@@ -85,7 +85,7 @@ class CategoryController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to update category: ' . $e->getMessage());
+                ->with('error', 'Failed to update category: '.$e->getMessage());
         }
     }
 

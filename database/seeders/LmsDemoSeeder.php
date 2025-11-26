@@ -40,14 +40,14 @@ class LmsDemoSeeder extends Seeder
         }
 
         // 2. Setup Categories & Tags
-        $categories = collect(['Pemrograman', 'Desain Grafis', 'Bisnis Digital', 'Marketing'])->map(function ($name) use ($instructor) {
+        $categories = collect(['Pemrograman', 'Desain Grafis', 'Bisnis Digital', 'Marketing'])->map(function ($name) {
             return Category::firstOrCreate(
                 ['slug' => Str::slug($name)],
                 [
                     'id' => (string) Str::uuid(),
                     'name' => $name,
                     'description' => "Kategori tentang $name",
-                    'created_by' => $instructor->id,
+                    'created_by' => null,
                 ]
             );
         });

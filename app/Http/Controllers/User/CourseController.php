@@ -187,6 +187,9 @@ class CourseController extends Controller
 
             $answersToCreate = [];
 
+            $totalMaxScore = 0;
+            $totalScoreAwarded = 0;
+
             foreach ($questions as $index => $question) {
 
                 $options = $question->options->values();
@@ -206,6 +209,11 @@ class CourseController extends Controller
                 if ($isCorrect) {
                     $correctCount++;
                 }
+                
+                $questionScore = $question->score ?? 1;
+                $totalMaxScore += $questionScore;
+                $scoreAwarded = $isCorrect ? $questionScore : 0;
+                $totalScoreAwarded += $scoreAwarded;
 
                 $answersToCreate[] = new QuizAnswer([
                     'id' => (string) Str::uuid(),
@@ -213,7 +221,7 @@ class CourseController extends Controller
                     'question_id' => $question->id,
                     'selected_option_id' => $selectedOption?->id,
                     'is_correct' => $isCorrect,
-                    'score_awarded' => $isCorrect ? ($question->score ?? 1) : 0,
+                    'score_awarded' => $scoreAwarded,
                 ]);
             }
 
@@ -221,8 +229,8 @@ class CourseController extends Controller
 
             $attempt->answers()->saveMany($answersToCreate);
 
-            $finalScore = ($totalQuestions > 0)
-                ? round(($correctCount / $totalQuestions) * 100)
+            $finalScore = ($totalMaxScore > 0)
+                ? round(($totalScoreAwarded / $totalMaxScore) * 100)
                 : 100;
             $attempt->score = $finalScore;
             $attempt->passed = $finalScore >= $quiz->effective_passing_score;

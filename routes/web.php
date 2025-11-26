@@ -16,13 +16,15 @@ use App\Http\Controllers\Admin\TagController;
 use App\Http\Controllers\Admin\UserIntegrationController;
 use App\Http\Controllers\Admin\UsersController;
 use App\Http\Controllers\Auth\SsoLoginController;
+use App\Http\Controllers\Instructor\CategoryController as InstructorCategoryController;
 use App\Http\Controllers\Instructor\CourseAssignController as InstructorCourseAssignController;
 use App\Http\Controllers\Instructor\CourseController as InstructorCourseController;
 use App\Http\Controllers\Instructor\CourseProgressController as InstructorCourseProgressController;
 use App\Http\Controllers\Instructor\LessonController as InstructorLessonController;
-use App\Http\Controllers\Instructor\ModuleController as InstructorModuleController;
 // Instructor Controllers
+use App\Http\Controllers\Instructor\ModuleController as InstructorModuleController;
 use App\Http\Controllers\Instructor\QuizController as InstructorQuizController;
+use App\Http\Controllers\Instructor\TagController as InstructorTagController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoleSwitchController;
 use App\Http\Controllers\User\CourseController as UserCourseController;
@@ -209,8 +211,8 @@ Route::prefix('instructor')
     ->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Instructor\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
-        Route::resource('categories', CategoryController::class)->except(['show']);
-        Route::resource('tags', TagController::class)->except(['show']);
+        Route::resource('categories', InstructorCategoryController::class)->except(['show']);
+        Route::resource('tags', InstructorTagController::class)->except(['show']);
 
         // Courses
         Route::get('courses', [InstructorCourseController::class, 'index'])->name('courses.index');

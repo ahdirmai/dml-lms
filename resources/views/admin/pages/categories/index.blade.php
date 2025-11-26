@@ -62,22 +62,26 @@
                                     {{ \Illuminate\Support\Str::limit($cat->description, 120) ?? '—' }}
                                 </x-ui.td>
                                 <x-ui.td class="text-right whitespace-nowrap">
-                                    <button type="button"
-                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1 btn-edit"
-                                        data-id="{{ $cat->id }}" data-name="{{ $cat->name }}"
-                                        data-slug="{{ $cat->slug }}" data-description="{{ $cat->description }}"
-                                        data-action="{{ route('admin.categories.update', $cat->id) }}">
-                                        Edit
-                                    </button>
-
-                                    <form action="{{ route('admin.categories.destroy', $cat->id) }}" method="POST"
-                                        class="inline" onsubmit="return confirm('Delete this category?')">
-                                        @csrf @method('DELETE')
-                                        <button type="submit"
-                                            class="inline-flex items-center justify-center font-semibold rounded-lg px-3 py-1.5 text-sm bg-danger text-white hover:brightness-95">
-                                            Delete
+                                    <div class="flex justify-end gap-2">
+                                        <button type="button" 
+                                            class="p-2 text-gray-400 hover:text-brand hover:bg-brand/5 rounded-lg transition-colors btn-edit"
+                                            title="Edit Category"
+                                            data-id="{{ $cat->id }}" 
+                                            data-name="{{ $cat->name }}"
+                                            data-slug="{{ $cat->slug }}" 
+                                            data-description="{{ $cat->description }}"
+                                            data-action="{{ route('admin.categories.update', $cat->id) }}">
+                                            <x-ui.icon name="pencil" class="w-4 h-4" />
                                         </button>
-                                    </form>
+
+                                        <form action="{{ route('admin.categories.destroy', $cat->id) }}" method="POST"
+                                            class="inline" onsubmit="return confirm('Delete this category?')">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Category">
+                                                <x-ui.icon name="trash" class="w-4 h-4" />
+                                            </button>
+                                        </form>
+                                    </div>
                                 </x-ui.td>
                             </tr>
                             @empty

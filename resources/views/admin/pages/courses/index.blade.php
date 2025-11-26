@@ -229,8 +229,21 @@
                             @forelse($courses as $c)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-3 py-2 text-dark">
-                                    <div class="font-semibold">{{ $c->title }}</div>
-                                    <div class="text-xs text-dark/60">{{ \Str::limit($c->description, 80) }}</div>
+                                    <div class="flex items-center gap-3">
+                                        <div class="shrink-0 w-16 h-10 bg-gray-100 rounded overflow-hidden">
+                                            @if($c->thumbnail_path)
+                                                <img src="{{ Storage::url($c->thumbnail_path) }}" alt="" class="w-full h-full object-cover">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <div>
+                                            <div class="font-semibold">{{ $c->title }}</div>
+                                            <div class="text-xs text-dark/60">{{ \Str::limit($c->description, 80) }}</div>
+                                        </div>
+                                    </div>
                                 </td>
 
                                 <td class="px-3 py-2">
@@ -268,7 +281,7 @@
                                 </td>
 
                                 <td class="px-3 py-2">
-                                    <span class="text-dark/70">{{ number_format($c->students_count ?? 0) }}</span>
+                                    <span class="text-dark/70">{{ number_format($c->enrollments_count ?? 0) }}</span>
                                 </td>
 
                                 <td class="px-3 py-2">
@@ -276,33 +289,57 @@
                                 </td>
 
                                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                                    <a href="{{ route('admin.courses.edit', $c->id) }}"
-                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
-                                        Builder
-                                    </a>
-                                    <a href="{{ route('admin.courses.assign', $c->id) }}"
-                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
-                                        Assign
-                                    </a>
-                                    <a href="{{ route('admin.courses.progress', $c->id) }}"
-                                        class="inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-1.5 text-sm text-dark hover:bg-soft mr-1">
-                                        Progress
-                                    </a>
-                                    <form action="{{ route('admin.courses.destroy', $c->id) }}" method="POST"
-                                        class="inline" onsubmit="return confirm('Delete this course?')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="inline-flex items-center justify-center font-semibold rounded-lg px-3 py-1.5 text-sm bg-danger text-white hover:brightness-95">
-                                            Delete
-                                        </button>
-                                    </form>
+                                    <x-dropdown align="right" width="48">
+                                        <x-slot name="trigger">
+                                            <button class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none transition ease-in-out duration-150">
+                                                <div>Actions</div>
+                                                <div class="ml-1">
+                                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                                    </svg>
+                                                </div>
+                                            </button>
+                                        </x-slot>
+
+                                        <x-slot name="content">
+                                            <x-dropdown-link :href="route('admin.courses.edit', $c->id)">
+                                                Builder
+                                            </x-dropdown-link>
+                                            <x-dropdown-link :href="route('admin.courses.assign', $c->id)">
+                                                Assign Students
+                                            </x-dropdown-link>
+                                            <x-dropdown-link :href="route('admin.courses.progress', $c->id)">
+                                                Check Progress
+                                            </x-dropdown-link>
+                                            <div class="border-t border-gray-100"></div>
+                                            <form method="POST" action="{{ route('admin.courses.destroy', $c->id) }}">
+                                                @csrf
+                                                @method('DELETE')
+                                                <x-dropdown-link :href="route('admin.courses.destroy', $c->id)"
+                                                        onclick="event.preventDefault(); if(confirm('Are you sure?')) this.closest('form').submit();" class="text-red-600">
+                                                    Delete
+                                                </x-dropdown-link>
+                                            </form>
+                                        </x-slot>
+                                    </x-dropdown>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="px-3 py-6 text-center text-sm text-gray-500">No courses found
+                            <tr>
+                                <td colspan="7" class="px-3 py-12 text-center text-sm text-gray-500">
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg class="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                        </svg>
+                                        <p class="text-lg font-medium text-gray-900">No courses found</p>
+                                        <p class="text-gray-500">Get started by creating a new course.</p>
+                                        <a href="{{ route('admin.courses.create') }}" class="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-brand hover:bg-brand-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand">
+                                            Create Course
+                                        </a>
+                                    </div>
                                 </td>
+                            </tr>
                             </tr>
                             @endforelse
                         </tbody>
@@ -314,77 +351,82 @@
             <div class="space-y-3 md:hidden">
                 @forelse($courses as $c)
                 <x-ui.card class="p-4">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <h3 class="font-semibold text-dark text-base truncate">{{ $c->title }}</h3>
-                            <p class="text-xs text-dark/60 line-clamp-2">{{ \Str::limit($c->description, 140) }}</p>
-                        </div>
-                        <div class="shrink-0">
-                            @if($c->status === 'published')
-                            <x-ui.badge color="brand">Published</x-ui.badge>
-                            @elseif($c->status === 'archived')
-                            <x-ui.badge color="danger">Archived</x-ui.badge>
+                    <div class="flex items-start gap-3">
+                        <div class="shrink-0 w-20 h-20 bg-gray-100 rounded overflow-hidden">
+                            @if($c->thumbnail_path)
+                                <img src="{{ Storage::url($c->thumbnail_path) }}" alt="" class="w-full h-full object-cover">
                             @else
-                            <x-ui.badge color="gray">Draft</x-ui.badge>
+                                <div class="w-full h-full flex items-center justify-center text-gray-400">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                </div>
                             @endif
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-2">
+                                <h3 class="font-semibold text-dark text-base truncate">{{ $c->title }}</h3>
+                                <div class="shrink-0">
+                                    @if($c->status === 'published')
+                                    <x-ui.badge color="brand">Published</x-ui.badge>
+                                    @elseif($c->status === 'archived')
+                                    <x-ui.badge color="danger">Archived</x-ui.badge>
+                                    @else
+                                    <x-ui.badge color="gray">Draft</x-ui.badge>
+                                    @endif
+                                </div>
+                            </div>
+                            <p class="text-xs text-dark/60 line-clamp-2 mt-1">{{ \Str::limit($c->description, 140) }}</p>
+                            
+                            <dl class="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-dark/70">
+                                <div class="col-span-2">
+                                    <span class="text-dark/60">Category:</span>
+                                    @if($c->categories->isNotEmpty())
+                                    {{ \Illuminate\Support\Str::limit($c->categories->pluck('name')->join(', '), 60) }}
+                                    @else
+                                    —
+                                    @endif
+                                </div>
+                                <div>
+                                    <span class="text-dark/60">Students:</span> {{ number_format($c->enrollments_count ?? 0) }}
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-dark/60">By:</span> {{ $c->instructor->name ?? 'N/A' }}
+                                </div>
+                            </dl>
                         </div>
                     </div>
 
-                    <dl class="mt-3 grid grid-cols-2 gap-2 text-xs text-dark/70">
-                        <div class="col-span-2">
-                            <dt class="sr-only">Category</dt>
-                            <dd>
-                                <span class="text-dark/60">Category:</span>
-                                @if($c->categories->isNotEmpty())
-                                {{ \Illuminate\Support\Str::limit($c->categories->pluck('name')->join(', '), 60) }}
-                                @else
-                                —
-                                @endif
-                            </dd>
-                        </div>
-                        <div class="col-span-2">
-                            <dt class="sr-only">Tags</dt>
-                            <dd>
-                                <span class="text-dark/60">Tags:</span>
-                                @if($c->tags?->isNotEmpty())
-                                {{ \Illuminate\Support\Str::limit($c->tags->pluck('name')->join(', '), 60) }}
-                                @else
-                                —
-                                @endif
-                            </dd>
-                        </div>
-                        <div>
-                            <dt class="sr-only">Students</dt>
-                            <dd><span class="text-dark/60">Students:</span> {{ number_format($c->students_count ?? 0) }}
-                            </dd>
-                        </div>
-                        <div class="text-right">
-                            <dt class="sr-only">Instructor</dt>
-                            <dd><span class="text-dark/60">By:</span> {{ $c->instructor->name ?? 'N/A' }}</dd>
-                        </div>
-                    </dl>
+                    <div class="mt-3 pt-3 border-t border-soft flex justify-end gap-2">
+                         <x-dropdown align="right" width="48">
+                            <x-slot name="trigger">
+                                <button class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none transition ease-in-out duration-150 w-full justify-center">
+                                    Actions
+                                    <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </x-slot>
 
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <a href="{{ route('admin.courses.edit', $c->id) }}"
-                            class="flex-1 min-w-[7rem] inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-2 text-sm text-dark hover:bg-soft">
-                            Builder
-                        </a>
-                        <a href="{{ route('admin.courses.assign', $c->id) }}"
-                            class="flex-1 min-w-[7rem] inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-2 text-sm text-dark hover:bg-soft">
-                            Assign
-                        </a>
-                        <a href="{{ route('admin.courses.progress', $c->id) }}"
-                            class="flex-1 min-w-[7rem] inline-flex items-center justify-center font-semibold rounded-lg border px-3 py-2 text-sm text-dark hover:bg-soft">
-                            Progress
-                        </a>
-                        <form action="{{ route('admin.courses.destroy', $c->id) }}" method="POST"
-                            onsubmit="return confirm('Delete this course?')" class="flex-1 min-w-[7rem]">
-                            @csrf @method('DELETE')
-                            <button type="submit"
-                                class="w-full inline-flex items-center justify-center font-semibold rounded-lg px-3 py-2 text-sm bg-danger text-white hover:brightness-95">
-                                Delete
-                            </button>
-                        </form>
+                            <x-slot name="content">
+                                <x-dropdown-link :href="route('admin.courses.edit', $c->id)">
+                                    Builder
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.courses.assign', $c->id)">
+                                    Assign Students
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('admin.courses.progress', $c->id)">
+                                    Check Progress
+                                </x-dropdown-link>
+                                <div class="border-t border-gray-100"></div>
+                                <form method="POST" action="{{ route('admin.courses.destroy', $c->id) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <x-dropdown-link :href="route('admin.courses.destroy', $c->id)"
+                                            onclick="event.preventDefault(); if(confirm('Are you sure?')) this.closest('form').submit();" class="text-red-600">
+                                        Delete
+                                    </x-dropdown-link>
+                                </form>
+                            </x-slot>
+                        </x-dropdown>
                     </div>
                 </x-ui.card>
                 @empty

@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between">
             <h2 class="font-semibold text-xl text-dark leading-tight">Create Tag</h2>
             <x-ui.breadcrumbs :items="[
-        ['label'=>'Dashboard','href'=>route('dashboard')],
+        ['label'=>'Dashboard','href'=>route('admin.dashboard')],
         ['label'=>'Tags','href'=>route('admin.tags.index')],
         ['label'=>'Create'],
       ]" />
