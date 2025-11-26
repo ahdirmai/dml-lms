@@ -283,9 +283,29 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Thumbnail</label>
                     <input type="file" name="thumbnail" id="thumbnail" accept="image/*"
                         class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent" />
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Tags</label>
+                    <div class="flex gap-2">
+                        <select name="tags[]" id="tags" multiple
+                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent h-32">
+                            @php
+                                $currentTags = isset($course) ? $course->tags->pluck('id')->toArray() : old('tags', []);
+                            @endphp
+                            @foreach ($tags as $tag)
+                                <option value="{{ $tag->id }}" @selected(in_array($tag->id, $currentTags))>{{ $tag->name }}</option>
+                            @endforeach
+                        </select>
+                        <button type="button" onclick="openTagCreateModal()"
+                            class="bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-xl transition h-12 self-start"
+                            title="Buat Tag Baru">
+                            +
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Tahan Ctrl (Windows) atau Cmd (Mac) untuk memilih lebih dari satu.</p>
                 </div>
 
                 {{-- ======== TOGGLES: PRE/POST & REQUIRE ======== --}}
@@ -448,6 +468,29 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
     </div> {{-- end #editor-content --}}
 </main>
 
+{{-- MODAL: CREATE TAG --}}
+<div id="tag-create-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 justify-center items-center">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Buat Tag Baru</h3>
+        <form action="{{ route('admin.tags.store') }}" method="POST" id="tag-create-form">
+            @csrf
+            <div class="mb-4">
+                <label for="tag_name_input" class="block text-sm font-medium text-gray-700 mb-2">Nama Tag</label>
+                <input type="text" id="tag_name_input" name="name" placeholder="Contoh: PHP, Laravel"
+                    class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
+                    required>
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button type="button"
+                    class="bg-gray-200 text-gray-700 font-bold py-2 px-4 rounded-xl transition hover:bg-gray-300"
+                    onclick="closeTagCreateModal()">Batal</button>
+                <button type="submit"
+                    class="bg-primary-accent text-white font-bold py-2 px-4 rounded-xl transition hover:bg-[#2e82c8]">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- MODAL: CREATE MODULE --}}
 <div id="module-create-modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden z-50 justify-center items-center">
     <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
@@ -515,6 +558,7 @@ let contentSettings, contentLessonCreate, contentPretest, contentPosttest, conte
 let lessonCreateForm, lessonContentType, lessonContentArea;
 let saveDraftBtn, publishBtn, publishForm;
 let renameModal, renameForm, renameInput;
+let tagCreateModal, tagCreateForm, tagNameInput;
 let hasPre, hasPost, lblPre, lblPost, preReady, postReady;
 
 /* ===========================
@@ -687,6 +731,10 @@ document.addEventListener("DOMContentLoaded", () => {
   renameForm          = document.getElementById('module-rename-form');
   renameInput         = document.getElementById('module_rename_title_input');
 
+  tagCreateModal      = document.getElementById('tag-create-modal');
+  tagCreateForm       = document.getElementById('tag-create-form');
+  tagNameInput        = document.getElementById('tag_name_input');
+
   hasPre              = document.getElementById('has_pretest');
   hasPost             = document.getElementById('has_posttest');
   lblPre              = document.getElementById('label_has_pretest');
@@ -797,6 +845,66 @@ document.addEventListener("DOMContentLoaded", () => {
       const submitBtn = renameForm.querySelector('button[type="submit"]');
       const prevText  = submitBtn?.textContent;
       if (submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+      renameForm.submit(); // submit biasa
+    });
+  }
+
+  /* ===========================
+   *  Modal create tag (AJAX)
+   * =========================== */
+  window.openTagCreateModal = ()=>{
+    tagCreateModal.classList.remove('hidden'); tagCreateModal.classList.add('flex');
+    tagNameInput?.focus();
+  };
+  window.closeTagCreateModal = ()=>{
+    tagCreateModal.classList.add('hidden'); tagCreateModal.classList.remove('flex');
+  };
+
+  if (tagCreateForm) {
+    tagCreateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(tagCreateForm);
+        const submitBtn = tagCreateForm.querySelector('button[type="submit"]');
+        const prevText = submitBtn?.textContent;
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+        try {
+            const res = await fetch(tagCreateForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                },
+                body: fd
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                swalSuccess('Tag berhasil dibuat.');
+                closeTagCreateModal();
+                tagCreateForm.reset();
+
+                // Tambahkan ke select option
+                const select = document.getElementById('tags');
+                if (select && data.tag) {
+                    const opt = document.createElement('option');
+                    opt.value = data.tag.id;
+                    opt.textContent = data.tag.name;
+                    opt.selected = true;
+                    select.appendChild(opt);
+                }
+            } else {
+                swalError(data.message || 'Gagal membuat tag.');
+            }
+        } catch (err) {
+            console.error(err);
+            swalError('Terjadi kesalahan server.');
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = prevText; }
+        }
+    });
+  }
 
       try{
         const res = await fetch(renameForm.action, {

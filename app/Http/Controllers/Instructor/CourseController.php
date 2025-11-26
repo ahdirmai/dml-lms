@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\CourseRequest;
 use App\Models\Lms\Category;
 use App\Models\Lms\Course;
+use App\Models\Lms\Tag;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use Illuminate\Http\Request;
@@ -83,8 +84,9 @@ class CourseController extends Controller
     public function create()
     {
         $categories = Category::select('id', 'name')->orderBy('name')->get();
+        $tags       = Tag::select('id', 'name')->orderBy('name')->get();
 
-        return view('instructor.pages.courses.create-builder', compact('categories'));
+        return view('instructor.pages.courses.create-builder', compact('categories', 'tags'));
     }
 
     public function edit(Course $course)
@@ -95,12 +97,14 @@ class CourseController extends Controller
             'modules' => fn ($q) => $q->orderBy('order'),
             'modules.lessons' => fn ($q) => $q->orderBy('order_no'),
             'modules.lessons.quiz',
+            'tags:id,name',
         ]);
 
         $categories = Category::select('id', 'name')->orderBy('name')->get();
+        $tags       = Tag::select('id', 'name')->orderBy('name')->get();
         $instructors = User::select('id', 'name')->orderBy('name')->get();
 
-        return view('instructor.pages.courses.create-builder', compact('categories', 'instructors', 'course'));
+        return view('instructor.pages.courses.create-builder', compact('categories', 'instructors', 'course', 'tags'));
     }
 
     /**
@@ -151,6 +155,10 @@ class CourseController extends Controller
                 $course->categories()->sync([$categoryId]);
             } else {
                 $course->categories()->sync([]);
+            }
+
+            if (isset($data['tags'])) {
+                $course->tags()->sync($data['tags']);
             }
 
             // Log activity
@@ -241,6 +249,11 @@ class CourseController extends Controller
             // === Sinkron kategori ===
             $categoryId = $data['category_id'] ?? null;
             $course->categories()->sync($categoryId ? [$categoryId] : []);
+
+            // === Sinkron tags ===
+            if (isset($data['tags'])) {
+                $course->tags()->sync($data['tags']);
+            }
 
             // Log activity
             UserActivityLog::create([

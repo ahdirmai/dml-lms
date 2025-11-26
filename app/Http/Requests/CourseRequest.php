@@ -22,6 +22,8 @@ class CourseRequest extends FormRequest
             'level'         => ['nullable', Rule::in(['beginner', 'intermediate', 'advanced'])],
             'instructor_id' => ['nullable', 'exists:users,id'],
             'thumbnail'     => ['nullable', 'image', 'max:2048'],
+            'tags'          => ['nullable', 'array'],
+            'tags.*'        => ['exists:tags,id'],
         ];
     }
 }

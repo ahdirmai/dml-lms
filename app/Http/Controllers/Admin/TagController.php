@@ -42,11 +42,26 @@ class TagController extends Controller
 
             DB::commit();
 
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Tag created.',
+                    'tag'     => $tag = Tag::where('name', $request->name)->first()
+                ]);
+            }
+
             return redirect()
                 ->route('admin.tags.index')
                 ->with('success', 'Tag created.');
         } catch (Throwable $e) {
             DB::rollBack();
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to create tag: ' . $e->getMessage()
+                ], 500);
+            }
 
             return back()
                 ->withInput()
