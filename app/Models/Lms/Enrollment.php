@@ -52,6 +52,10 @@ class Enrollment extends Model
      */
     public function getLatestPretestAttemptAttribute()
     {
+        if (!$this->course || !$this->course->pretest) {
+            return null;
+        }
+
         $pretest_id = $this->course->pretest->id;
 
         return QuizAttempt::where('user_id', $this->user_id)
@@ -66,6 +70,10 @@ class Enrollment extends Model
      */
     public function getLatestPosttestAttemptAttribute()
     {
+        if (!$this->course || !$this->course->posttest) {
+            return null;
+        }
+
         $posttest_id = $this->course->posttest->id;
 
         return QuizAttempt::where('user_id', $this->user_id)
