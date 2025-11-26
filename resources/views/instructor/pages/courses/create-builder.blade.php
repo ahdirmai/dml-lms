@@ -289,14 +289,25 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
 
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Tags</label>
+                    
+                    {{-- 1. Real Hidden Select (Stores Data) --}}
+                    <select name="tags[]" id="real-tags" multiple class="hidden">
+                        @php
+                            $currentTags = isset($course) ? $course->tags->pluck('id')->toArray() : old('tags', []);
+                        @endphp
+                        @foreach ($tags as $tag)
+                            <option value="{{ $tag->id }}" @selected(in_array($tag->id, $currentTags))>{{ $tag->name }}</option>
+                        @endforeach
+                    </select>
+
+                    {{-- 2. UI Picker (User Interaction) --}}
                     <div class="flex gap-2">
-                        <select name="tags[]" id="tags" multiple
-                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent h-32">
-                            @php
-                                $currentTags = isset($course) ? $course->tags->pluck('id')->toArray() : old('tags', []);
-                            @endphp
+                        <select id="ui-tag-picker" 
+                            class="w-full p-3 border border-gray-300 rounded-xl focus:ring-primary-accent focus:border-primary-accent"
+                            onchange="pickTag(this)">
+                            <option value="">-- Pilih Tag --</option>
                             @foreach ($tags as $tag)
-                                <option value="{{ $tag->id }}" @selected(in_array($tag->id, $currentTags))>{{ $tag->name }}</option>
+                                <option value="{{ $tag->id }}">{{ $tag->name }}</option>
                             @endforeach
                         </select>
                         <button type="button" onclick="openTagCreateModal()"
@@ -305,7 +316,11 @@ $SHOW_POST = old('has_posttest', isset($course) ? (int)($course->has_posttest ??
                             +
                         </button>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Tahan Ctrl (Windows) atau Cmd (Mac) untuk memilih lebih dari satu.</p>
+                    
+                    {{-- 3. Selected Badges Container --}}
+                    <div class="flex flex-wrap gap-2 mt-3" id="selected-tags-container">
+                        {{-- Badges injected via JS --}}
+                    </div>
                 </div>
 
                 {{-- ======== TOGGLES: PRE/POST & REQUIRE ======== --}}
@@ -845,66 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const submitBtn = renameForm.querySelector('button[type="submit"]');
       const prevText  = submitBtn?.textContent;
       if (submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
-      renameForm.submit(); // submit biasa
-    });
-  }
 
-  /* ===========================
-   *  Modal create tag (AJAX)
-   * =========================== */
-  window.openTagCreateModal = ()=>{
-    tagCreateModal.classList.remove('hidden'); tagCreateModal.classList.add('flex');
-    tagNameInput?.focus();
-  };
-  window.closeTagCreateModal = ()=>{
-    tagCreateModal.classList.add('hidden'); tagCreateModal.classList.remove('flex');
-  };
-
-  if (tagCreateForm) {
-    tagCreateForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(tagCreateForm);
-        const submitBtn = tagCreateForm.querySelector('button[type="submit"]');
-        const prevText = submitBtn?.textContent;
-
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
-
-        try {
-            const res = await fetch(tagCreateForm.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': token,
-                    'Accept': 'application/json'
-                },
-                body: fd
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                swalSuccess('Tag berhasil dibuat.');
-                closeTagCreateModal();
-                tagCreateForm.reset();
-
-                // Tambahkan ke select option
-                const select = document.getElementById('tags');
-                if (select && data.tag) {
-                    const opt = document.createElement('option');
-                    opt.value = data.tag.id;
-                    opt.textContent = data.tag.name;
-                    opt.selected = true;
-                    select.appendChild(opt);
-                }
-            } else {
-                swalError(data.message || 'Gagal membuat tag.');
-            }
-        } catch (err) {
-            console.error(err);
-            swalError('Terjadi kesalahan server.');
-        } finally {
-            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = prevText; }
-        }
-    });
-  }
 
       try{
         const res = await fetch(renameForm.action, {
@@ -939,6 +895,144 @@ document.addEventListener("DOMContentLoaded", () => {
       }finally{
         if (submitBtn){ submitBtn.disabled = false; submitBtn.textContent = prevText || 'Simpan'; }
       }
+    });
+  }
+
+  /* ===========================
+   *  Modal create tag (AJAX)
+   * =========================== */
+  window.openTagCreateModal = ()=>{
+    tagCreateModal.classList.remove('hidden'); tagCreateModal.classList.add('flex');
+    tagNameInput?.focus();
+  };
+  window.closeTagCreateModal = ()=>{
+    tagCreateModal.classList.add('hidden'); tagCreateModal.classList.remove('flex');
+  };
+
+  /* ===========================
+   *  Tag Picker Logic
+   * =========================== */
+  window.initTagSelector = () => {
+      const realSelect = document.getElementById('real-tags');
+      const picker = document.getElementById('ui-tag-picker');
+      const container = document.getElementById('selected-tags-container');
+      if (!realSelect || !picker || !container) return;
+
+      // Loop real select to find initially selected items
+      Array.from(realSelect.options).forEach(opt => {
+          if (opt.selected) {
+              // Create Badge
+              createBadge(opt.value, opt.text);
+              // Remove from Picker
+              const pickerOpt = picker.querySelector(`option[value="${opt.value}"]`);
+              if (pickerOpt) pickerOpt.remove();
+          }
+      });
+  };
+
+  window.pickTag = (picker) => {
+      const val = picker.value;
+      if (!val) return;
+      
+      const option = picker.options[picker.selectedIndex];
+      const text = option.text;
+
+      // 1. Select in Real Input
+      const realSelect = document.getElementById('real-tags');
+      const realOpt = realSelect.querySelector(`option[value="${val}"]`);
+      if (realOpt) realOpt.selected = true;
+
+      // 2. Create Badge
+      createBadge(val, text);
+
+      // 3. Remove from Picker
+      option.remove();
+      picker.value = ""; // Reset
+  };
+
+  window.unpickTag = (val, text, btn) => {
+      // 1. Deselect in Real Input
+      const realSelect = document.getElementById('real-tags');
+      const realOpt = realSelect.querySelector(`option[value="${val}"]`);
+      if (realOpt) realOpt.selected = false;
+
+      // 2. Add back to Picker
+      const picker = document.getElementById('ui-tag-picker');
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.text = text;
+      picker.add(opt); // Adds to end
+
+      // 3. Remove Badge
+      if (btn) btn.parentElement.remove();
+  };
+
+  function createBadge(val, text) {
+      const container = document.getElementById('selected-tags-container');
+      const badge = document.createElement('span');
+      badge.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-accent text-white transition transform hover:scale-105';
+      // Escape text just in case, though usually safe from DB
+      badge.innerHTML = `
+          ${text}
+          <button type="button" class="ml-2 text-white hover:text-red-200 focus:outline-none font-bold" 
+            onclick="unpickTag('${val}', '${text.replace(/'/g, "\\'")}', this)">
+              &times;
+          </button>
+      `;
+      container.appendChild(badge);
+  }
+
+  // Init on load
+  document.addEventListener('DOMContentLoaded', () => {
+      initTagSelector();
+  });
+
+  if (tagCreateForm) {
+    tagCreateForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(tagCreateForm);
+        const submitBtn = tagCreateForm.querySelector('button[type="submit"]');
+        const prevText = submitBtn?.textContent;
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Menyimpan...'; }
+
+        try {
+            const res = await fetch(tagCreateForm.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json'
+                },
+                body: fd
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                swalSuccess('Tag berhasil dibuat.');
+                closeTagCreateModal();
+                tagCreateForm.reset();
+
+                // 1. Add to Real Select (Selected)
+                const realSelect = document.getElementById('real-tags');
+                if (realSelect && data.tag) {
+                    const opt = document.createElement('option');
+                    opt.value = data.tag.id;
+                    opt.textContent = data.tag.name;
+                    opt.selected = true;
+                    realSelect.appendChild(opt);
+                    
+                    // 2. Create Badge immediately (don't add to picker)
+                    createBadge(data.tag.id, data.tag.name);
+                }
+            } else {
+                swalError(data.message || 'Gagal membuat tag.');
+            }
+        } catch (err) {
+            console.error(err);
+            swalError('Terjadi kesalahan server.');
+        } finally {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = prevText; }
+        }
     });
   }
 
