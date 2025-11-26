@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
@@ -25,29 +25,68 @@ class UserSeeder extends Seeder
         $admin->assignRole(['admin']);
 
         // 2. Instructors
-        for ($i = 1; $i <= 5; $i++) {
+        // 2. Instructors
+        $instructorNames = [
+            'Budi Santoso',
+            'Siti Aminah',
+            'Rina Wijaya',
+            'Agus Pratama',
+            'Dewi Lestari',
+        ];
+
+        foreach ($instructorNames as $index => $name) {
+            $i = $index + 1;
+            $emailName = strtolower(str_replace(' ', '.', $name));
             $instructor = User::firstOrCreate(
-                ['email' => "instructor{$i}@dml-lms.test"],
+                ['email' => "{$emailName}@lms.test"],
                 [
-                    'name' => "Instructor {$i}",
+                    'name' => $name,
                     'password' => Hash::make('password'),
                     'email_verified_at' => now(),
                 ]
             );
             $instructor->assignRole(['instructor', 'student']);
+
+            // Create Profile
+            \App\Models\UserProfile::firstOrCreate(
+                ['user_id' => $instructor->id],
+                [
+                    'job_title' => 'Instructor',
+                    'department' => 'Education',
+                ]
+            );
         }
 
         // 3. Students
-        for ($i = 1; $i <= 30; $i++) {
+        $studentNames = [
+            'Andi Saputra', 'Bambang Pamungkas', 'Citra Kirana', 'Dedi Mulyadi', 'Eka Putri',
+            'Fajar Nugraha', 'Gita Gutawa', 'Hendra Setiawan', 'Indah Permatasari', 'Joko Anwar',
+            'Kartika Putri', 'Lukman Sardi', 'Maya Septha', 'Nina Zatulini', 'Oki Setiana',
+            'Prilly Latuconsina', 'Qory Sandioriva', 'Raffi Ahmad', 'Sandra Dewi', 'Titi Kamal',
+            'Uya Kuya', 'Vino G Bastian', 'Wulan Guritno', 'Xavier Hernandez', 'Yuni Shara',
+            'Zaskia Adya Mecca', 'Arif Muhammad', 'Bayu Skak', 'Chandra Liow', 'Deddy Corbuzier',
+        ];
+
+        foreach ($studentNames as $index => $name) {
+            $i = $index + 1;
             $student = User::firstOrCreate(
-                ['email' => "student{$i}@dml-lms.test"],
+                ['email' => "student{$i}@lms.test"],
                 [
-                    'name' => "Student {$i}",
+                    'name' => $name,
                     'password' => Hash::make('password'),
                     'email_verified_at' => now(),
                 ]
             );
             $student->assignRole('student');
+
+            // Create Profile
+            \App\Models\UserProfile::firstOrCreate(
+                ['user_id' => $student->id],
+                [
+                    'job_title' => collect(['Staff', 'Officer', 'Analyst', 'Intern'])->random(),
+                    'department' => collect(['Operations', 'IT', 'HR', 'Finance', 'Marketing'])->random(),
+                ]
+            );
         }
 
         $this->command->info('✅ User seeder berhasil dijalankan (1 admin, 5 instructor, 30 student).');

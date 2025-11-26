@@ -75,7 +75,116 @@ class LmsDemoSeeder extends Seeder
             }
         }
 
+        // 4. Create Leaderboard Data
+        $this->createLeaderboardData();
+
         $this->command->info('✅ LmsDemoSeeder selesai: 10 courses, modules, lessons, enrollments, & activity logs generated.');
+    }
+
+    private function createLeaderboardData()
+    {
+        $this->command->info('Generating Leaderboard Data...');
+
+        // Create 10 specific users for leaderboard
+        $leaderboardNames = [
+            'Herman Kusuma',
+            'Joko Widodo',
+            'Susilo Bambang',
+            'Megawati Putri',
+            'Abdurrahman Wahid',
+            'Bacharuddin Jusuf',
+            'Soeharto Harto',
+            'Soekarno Karno',
+            'Mohammad Hatta',
+            'Sudirman Dirman',
+        ];
+
+        $leaderboardUsers = collect();
+        foreach ($leaderboardNames as $index => $name) {
+            $i = $index + 1;
+            $emailName = strtolower(str_replace(' ', '.', $name));
+
+            $user = User::firstOrCreate(
+                ['email' => "{$emailName}@lms.test"],
+                [
+                    'name' => $name,
+                    'password' => bcrypt('password'), // or default
+                    'email_verified_at' => now(),
+                    'lms_status' => 'active',
+                ]
+            );
+            $user->assignRole('student');
+
+            // Create Profile
+            \App\Models\UserProfile::firstOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'job_title' => collect(['Engineer', 'Manager', 'Analyst', 'Specialist'])->random(),
+                    'department' => collect(['Operations', 'IT', 'HR', 'Finance'])->random(),
+                ]
+            );
+
+            $leaderboardUsers->push($user);
+        }
+
+        $courses = Course::all();
+        if ($courses->isEmpty()) {
+            return;
+        }
+
+        foreach ($leaderboardUsers as $index => $user) {
+            // Distribute completed courses count:
+            // Top 1-3: 15-20 courses
+            // Top 4-7: 10-14 courses
+            // Top 8-10: 5-9 courses
+
+            if ($index < 3) {
+                $count = rand(15, 20);
+            } elseif ($index < 7) {
+                $count = rand(10, 14);
+            } else {
+                $count = rand(5, 9);
+            }
+
+            // Ensure we don't try to enroll in more courses than exist
+            $count = min($count, $courses->count());
+
+            $userCourses = $courses->random($count);
+
+            foreach ($userCourses as $course) {
+                $enrollment = Enrollment::firstOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'course_id' => $course->id,
+                    ],
+                    [
+                        'status' => 'completed',
+                        'enrolled_at' => now()->subDays(rand(30, 60)),
+                        'completed_at' => now()->subDays(rand(1, 29)),
+                    ]
+                );
+
+                // If course has post-test, create a high score attempt
+                if ($course->posttest) {
+                    // Score logic: Top users get higher scores
+                    // Top 3: 95-100
+                    // Others: 80-94
+                    $score = ($index < 3) ? rand(95, 100) : rand(80, 94);
+
+                    \App\Models\Lms\QuizAttempt::create([
+                        'id' => (string) Str::uuid(),
+                        'quiz_id' => $course->posttest->id,
+                        'user_id' => $user->id,
+                        'attempt_no' => 1,
+                        'started_at' => now()->subHours(1),
+                        'finished_at' => now(),
+                        'score' => $score,
+                        'passed' => true,
+                        'duration_seconds' => rand(60, 900),
+                    ]);
+                }
+            }
+        }
     }
 
     private function createCourse($index, $instructor, $category, $tags, $students)
@@ -145,7 +254,7 @@ class LmsDemoSeeder extends Seeder
                 'youtube_video_id' => 'BX2FfdEnxxc',
                 'content_url' => 'https://www.youtube.com/watch?v=BX2FfdEnxxc',
                 'order_no' => 1,
-                'duration_seconds' => 300,
+                'duration_seconds' => 60,
             ]);
 
             // Lesson 2: GDrive

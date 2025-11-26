@@ -1,19 +1,25 @@
 {{-- resources/views/dashboard/partials/courses-section.blade.php --}}
-<section class="space-y-6" x-data="courseFilter()">
+<section class="space-y-6" id="courses-section">
     <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-custom-soft border border-gray-100">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-            <h2 class="text-lg sm:text-xl font-bold text-brand">
-                Semua Kelas (<span x-text="activeFilter">All</span>)
-            </h2>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+                <h2 class="text-lg sm:text-xl font-bold text-brand whitespace-nowrap">
+                    Semua Kelas (<span id="filtered-count">{{ count($courses) }}</span>)
+                </h2>
+                
+                {{-- Search Input --}}
+                <div class="relative w-full sm:w-64">
+                    <input type="text" id="course-search" placeholder="Cari kursus..."
+                        class="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand transition-all">
+                    <i data-lucide="search" class="absolute left-3 top-2.5 w-4 h-4 text-gray-400"></i>
+                </div>
+            </div>
 
             {{-- Filter buttons --}}
-            <div class="flex space-x-2 overflow-x-auto scrollbar-hide pb-2 sm:pb-0">
+            <div class="flex space-x-2 overflow-x-auto scrollbar-hide pb-2 sm:pb-0" id="course-filters">
                 @foreach(['All', 'Completed', 'In Progress', 'Not Started', 'Expired'] as $filter)
-                <button @click="setFilter('{{ $filter }}')"
-                    :class="activeFilter === '{{ $filter }}' ? 'bg-brand text-white shadow-md' : 'bg-white text-gray-700 hover:bg-soft border border-gray-200'"
-                    class="flex-shrink-0 px-4 py-2 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20"
-                    aria-pressed="{{ $filter === 'All' ? 'true' : 'false' }}"
-                    :aria-pressed="activeFilter === '{{ $filter }}'">
+                <button data-filter="{{ $filter }}"
+                    class="filter-btn flex-shrink-0 px-4 py-2 text-xs sm:text-sm font-medium rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/20 {{ $filter === 'All' ? 'bg-brand text-white shadow-md' : 'bg-white text-gray-700 hover:bg-soft border border-gray-200' }}">
                     {{ $filter }}
                 </button>
                 @endforeach
@@ -21,17 +27,18 @@
         </div>
 
         {{-- Course list --}}
-        <div class="space-y-5 min-h-[200px]">
+        <div class="space-y-5 min-h-[200px]" id="course-list-container">
             @forelse($courses as $course)
             @php
             $courseId = $course['id'];
             $detailUrl = route('user.courses.show', $courseId);
             $status = $course['status'] ?? 'Not Started';
             @endphp
-            <div x-show="shouldShow('{{ $status }}')" x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 transform scale-95"
-                x-transition:enter-end="opacity-100 transform scale-100"
-                class="bg-white p-4 sm:p-5 rounded-xl shadow-custom-soft border border-gray-100 flex flex-col md:flex-row transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
+            <div data-id="{{ $courseId }}" 
+                 data-status="{{ $status }}" 
+                 data-title="{{ strtolower($course['title']) }}" 
+                 data-category="{{ strtolower($course['category'] ?? '') }}"
+                 class="course-card bg-white p-4 sm:p-5 rounded-xl shadow-custom-soft border border-gray-100 flex flex-col md:flex-row transition-all duration-300 hover:shadow-lg hover:-translate-y-1 group">
 
                 {{-- Thumbnail --}}
                 <div
@@ -198,14 +205,25 @@
             @endforelse
 
             {{-- Empty state for filter --}}
-            <div x-show="filteredCount === 0 && totalCourses > 0" x-cloak
-                class="text-center text-gray-500 py-10 transition-all duration-300">
+            <div id="empty-state" class="hidden text-center text-gray-500 py-10 transition-all duration-300">
                 <i data-lucide="filter-x" class="w-12 h-12 mx-auto mb-4 text-gray-300"></i>
                 <p class="font-medium">Tidak ada kursus ditemukan</p>
-                <p class="text-sm">Tidak ada kursus dengan status "<span x-text="activeFilter"></span>".</p>
-                <button @click="setFilter('All')" class="mt-4 text-brand hover:underline text-sm font-medium">
-                    Tampilkan Semua
+                <p class="text-sm">Tidak ada kursus yang cocok dengan pencarian atau filter Anda.</p>
+                <button id="reset-filter-btn" class="mt-4 text-brand hover:underline text-sm font-medium">
+                    Reset Filter
                 </button>
+            </div>
+
+            {{-- Pagination Controls --}}
+            <div id="pagination-controls" class="hidden flex items-center justify-between border-t border-gray-100 pt-4">
+                <div class="text-xs text-gray-500">
+                    Menampilkan <span id="pag-start">0</span> - 
+                    <span id="pag-end">0</span> 
+                    dari <span id="pag-total">0</span> kursus
+                </div>
+                <div class="flex gap-1" id="pagination-buttons">
+                    {{-- Generated by JS --}}
+                </div>
             </div>
         </div>
     </div>
@@ -221,52 +239,185 @@
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
-
-    [x-cloak] {
-        display: none !important;
-    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-    document.addEventListener('alpine:init', () => {
-        Alpine.data('courseFilter', () => ({
-            activeFilter: 'All',
-            totalCourses: {{ count($courses) }},
-            
+    document.addEventListener('DOMContentLoaded', () => {
+        class CourseManager {
+            constructor() {
+                this.cards = Array.from(document.querySelectorAll('.course-card'));
+                this.itemsPerPage = 6;
+                this.currentPage = 1;
+                this.activeFilter = 'All';
+                this.searchQuery = '';
+                
+                this.init();
+            }
+
             init() {
-                // Re-initialize icons when filter changes or DOM updates
-                this.$watch('activeFilter', () => {
-                    this.$nextTick(() => {
-                        if (window.lucide) window.lucide.createIcons();
+                // Event Listeners
+                const searchInput = document.getElementById('course-search');
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        this.searchQuery = e.target.value.toLowerCase();
+                        this.currentPage = 1;
+                        this.render();
+                    });
+                }
+
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        this.activeFilter = e.target.dataset.filter;
+                        this.currentPage = 1;
+                        this.updateFilterButtons();
+                        this.render();
                     });
                 });
-            },
 
-            setFilter(filter) {
-                this.activeFilter = filter;
-            },
+                const resetBtn = document.getElementById('reset-filter-btn');
+                if (resetBtn) {
+                    resetBtn.addEventListener('click', () => {
+                        this.activeFilter = 'All';
+                        this.searchQuery = '';
+                        if (searchInput) searchInput.value = '';
+                        this.currentPage = 1;
+                        this.updateFilterButtons();
+                        this.render();
+                    });
+                }
 
-            shouldShow(status) {
-                if (this.activeFilter === 'All') return true;
-                return status === this.activeFilter;
-            },
+                this.render();
+            }
 
-            get filteredCount() {
-                if (this.activeFilter === 'All') return this.totalCourses;
-                // Note: This is a simplified count. For exact count in JS, we'd need to pass the data array to Alpine.
-                // But since we are using x-show on DOM elements, we can count visible elements if needed.
-                // For simplicity and performance, we can use a query selector count.
-                const cards = document.querySelectorAll('.course-card'); // Assuming we add this class back or use a specific selector
-                // Actually, let's pass the courses data status to Alpine for accurate counting without DOM query spam
-                // Or simpler: query the DOM for visible elements matching the status?
-                // Let's do the robust way: pass simplified data to Alpine.
-                return this.coursesData.filter(c => this.activeFilter === 'All' || c.status === this.activeFilter).length;
-            },
+            updateFilterButtons() {
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    if (btn.dataset.filter === this.activeFilter) {
+                        btn.classList.remove('bg-white', 'text-gray-700', 'hover:bg-soft', 'border', 'border-gray-200');
+                        btn.classList.add('bg-brand', 'text-white', 'shadow-md');
+                    } else {
+                        btn.classList.add('bg-white', 'text-gray-700', 'hover:bg-soft', 'border', 'border-gray-200');
+                        btn.classList.remove('bg-brand', 'text-white', 'shadow-md');
+                    }
+                });
+            }
 
-            coursesData: @json(collect($courses)->map(fn($c) => ['status' => $c['status'] ?? 'Not Started']))
-        }));
+            getFilteredCards() {
+                return this.cards.filter(card => {
+                    const status = card.dataset.status;
+                    const title = card.dataset.title || '';
+                    const category = card.dataset.category || '';
+
+                    const matchesStatus = this.activeFilter === 'All' || status === this.activeFilter;
+                    const matchesSearch = title.includes(this.searchQuery) || category.includes(this.searchQuery);
+
+                    return matchesStatus && matchesSearch;
+                });
+            }
+
+            render() {
+                const filtered = this.getFilteredCards();
+                const total = filtered.length;
+                const totalPages = Math.ceil(total / this.itemsPerPage);
+
+                // Hide all first
+                this.cards.forEach(card => card.classList.add('hidden'));
+
+                // Calculate pagination
+                const start = (this.currentPage - 1) * this.itemsPerPage;
+                const end = start + this.itemsPerPage;
+                const paginated = filtered.slice(start, end);
+
+                // Show paginated items
+                paginated.forEach(card => card.classList.remove('hidden'));
+
+                // Update UI counts
+                const countEl = document.getElementById('filtered-count');
+                if (countEl) countEl.textContent = total;
+                
+                const pagStartEl = document.getElementById('pag-start');
+                if (pagStartEl) pagStartEl.textContent = total > 0 ? start + 1 : 0;
+                
+                const pagEndEl = document.getElementById('pag-end');
+                if (pagEndEl) pagEndEl.textContent = Math.min(end, total);
+                
+                const pagTotalEl = document.getElementById('pag-total');
+                if (pagTotalEl) pagTotalEl.textContent = total;
+
+                // Empty state
+                const emptyState = document.getElementById('empty-state');
+                if (emptyState) {
+                    if (total === 0 && this.cards.length > 0) {
+                        emptyState.classList.remove('hidden');
+                    } else {
+                        emptyState.classList.add('hidden');
+                    }
+                }
+
+                // Pagination Controls
+                const paginationControls = document.getElementById('pagination-controls');
+                if (paginationControls) {
+                    if (totalPages > 1) {
+                        paginationControls.classList.remove('hidden');
+                        this.renderPaginationButtons(totalPages);
+                    } else {
+                        paginationControls.classList.add('hidden');
+                    }
+                }
+                
+                // Re-init icons if needed (Lucide)
+                if (window.lucide) window.lucide.createIcons();
+            }
+
+            renderPaginationButtons(totalPages) {
+                const container = document.getElementById('pagination-buttons');
+                if (!container) return;
+                
+                container.innerHTML = '';
+
+                // Prev
+                const prevBtn = document.createElement('button');
+                prevBtn.textContent = 'Previous';
+                prevBtn.className = `px-3 py-1 rounded-md text-xs font-medium border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed`;
+                prevBtn.disabled = this.currentPage === 1;
+                prevBtn.onclick = () => {
+                    if (this.currentPage > 1) {
+                        this.currentPage--;
+                        this.render();
+                    }
+                };
+                container.appendChild(prevBtn);
+
+                // Pages
+                for (let i = 1; i <= totalPages; i++) {
+                    const btn = document.createElement('button');
+                    btn.textContent = i;
+                    const isActive = i === this.currentPage;
+                    btn.className = `w-8 h-8 flex items-center justify-center rounded-md text-xs font-medium border transition-colors ${isActive ? 'bg-brand text-white border-brand' : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'}`;
+                    btn.onclick = () => {
+                        this.currentPage = i;
+                        this.render();
+                    };
+                    container.appendChild(btn);
+                }
+
+                // Next
+                const nextBtn = document.createElement('button');
+                nextBtn.textContent = 'Next';
+                nextBtn.className = `px-3 py-1 rounded-md text-xs font-medium border border-gray-200 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed`;
+                nextBtn.disabled = this.currentPage === totalPages;
+                nextBtn.onclick = () => {
+                    if (this.currentPage < totalPages) {
+                        this.currentPage++;
+                        this.render();
+                    }
+                };
+                container.appendChild(nextBtn);
+            }
+        }
+
+        new CourseManager();
     });
 </script>
 @endpush

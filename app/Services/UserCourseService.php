@@ -26,8 +26,8 @@ class UserCourseService
                                     ->with('lessons:id,module_id')
                                     ->orderBy('order');
                             },
-                            'pretest.questions.options',
-                            'posttest.questions.options',
+                            'pretest.questions' => fn ($q) => $q->orderBy('order')->with('options'),
+                            'posttest.questions' => fn ($q) => $q->orderBy('order')->with('options'),
                         ]);
                 },
                 'lessonProgress',
@@ -366,10 +366,10 @@ class UserCourseService
                 'course' => fn ($q) => $q->with([
                     'modules' => fn ($q_mod) => $q_mod->orderBy('order', 'asc'),
                     'modules.lessons' => fn ($q_less) => $q_less->with('quiz')->orderBy('order_no', 'asc'),
-
+                    
                     // PENTING: load soal & opsi untuk pre/post test
-                    'pretest.questions.options',
-                    'posttest.questions.options',
+                    'pretest.questions' => fn ($q) => $q->orderBy('order')->with('options'),
+                    'posttest.questions' => fn ($q) => $q->orderBy('order')->with('options'),
                 ])->withSum('lessons', 'duration_seconds'),
                 'lessonProgress',
                 'dueDate',

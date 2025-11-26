@@ -16,6 +16,12 @@
     @if(empty($modules))
     <p class="text-sm text-gray-500">Belum ada modul yang terdaftar untuk kursus ini.</p>
     @else
+    @php
+    // Initialize sequential check tracker
+    // We assume the very first lesson is accessible (unless blocked by pretest/date)
+    $previousLessonCompleted = true;
+    @endphp
+
     <div class="space-y-3">
         @foreach($modules as $modIndex => $m)
         @php
@@ -59,10 +65,19 @@
 
                     if ($isAccessBlocked) {
                         $isLocked = true;
+                    } elseif (! $previousLessonCompleted) {
+                         // Logic sequential: jika pelajaran sebelumnya belum selesai, maka ini terkunci
+                        $isLocked = true;
                     }
 
+                    // Update tracker untuk iterasi berikutnya
+                    // Note: Kita update nilainya SETELAH pengecekan current lesson
+                    // Agar lesson berikutnya tahu status lesson ini.
+                    // Namun kita tidak ubah $previousLessonCompleted jika current lesson terkunci (pasti belum done)
+                    // Tapi $isDone dari DB sudah source of truth.
+                    $previousLessonCompleted = $isDone;
+
                     $type = $ls['type'] ?? 'video';
-                    $icon = $type === 'quiz' ? '❓' : '▶';
                     @endphp
                     <li class="px-4 py-2.5">
                         <div class="flex items-center justify-between gap-3">
@@ -73,7 +88,15 @@
                                                                          : ($type === 'quiz'
                                                                              ? 'border-rose-300 text-rose-500 bg-rose-50'
                                                                              : 'border-gray-300 text-gray-500 bg-gray-50') }}">
-                                    {{ $icon }}
+                                    @if($type === 'quiz')
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    @elseif($type === 'gdrive' || $type === 'pdf')
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                    @elseif($type === 'text')
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"></path></svg>
+                                    @else
+                                        ▶
+                                    @endif
                                 </span>
                                 <div class="min-w-0">
                                     <p class="text-sm font-medium truncate
