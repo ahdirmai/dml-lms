@@ -1,290 +1,272 @@
-# 🧑‍💻 DML LMS — Developer-Facing Documentation
+# DML LMS (Learning Management System)
 
-> Dokumentasi ini berfungsi sebagai panduan bagi **developer** yang akan berkontribusi, melakukan setup lokal, memahami struktur project, serta menjalankan testing dan seeding pada sistem **DML Learning Management System (LMS)**.
+A robust and modern Learning Management System built with Laravel 12.
 
----
+## 🛠 Tech Stack
 
-## 1. 🧩 CONTRIBUTING.md — Panduan Kontribusi Developer
+-   **Framework:** [Laravel 12](https://laravel.com)
+-   **Frontend:** [Tailwind CSS](https://tailwindcss.com), [Alpine.js](https://alpinejs.dev), [Vite](https://vitejs.dev)
+-   **Database:** MySQL / MariaDB / SQLite
+-   **PDF Generation:** [dompdf](https://github.com/barryvdh/laravel-dompdf)
+-   **Excel:** [Laravel Excel](https://laravel-excel.com)
+-   **Permissions:** [Spatie Laravel Permission](https://spatie.be/docs/laravel-permission)
 
-### 1.1 Prasyarat
-Pastikan kamu sudah menginstal dependensi berikut:
-- **PHP** ≥ 8.2 dengan ekstensi: `pdo_mysql`, `mbstring`, `intl`, `zip`, `fileinfo`
-- **Composer** ≥ v2.5
-- **Node.js** ≥ 18 + **npm** atau **pnpm**
-- **MySQL** ≥ 8.0 atau **MariaDB** ≥ 10.6
-- **Redis** (opsional, untuk queue)
-- **Git** (untuk version control)
-- **Laravel CLI** global (opsional)
+## 📋 Requirements
 
-### 1.2 Setup Lokal
+Ensure your server meets the following requirements:
 
-```bash
-# 1️⃣ Clone repo
-git clone https://github.com/dml-co/dml-lms.git
-cd dml-lms
+-   **PHP**: ^8.2
+-   **Composer**
+-   **Node.js** & **NPM**
+-   **Database**: MySQL, MariaDB, or SQLite
 
-# 2️⃣ Install dependensi
-composer install
-npm install && npm run dev
+## 🚀 Installation (Local Development)
 
-# 3️⃣ Salin dan konfigurasi environment
-cp .env.example .env
-php artisan key:generate
+Follow these steps to set up the project locally:
 
-# 4️⃣ Jalankan migrasi & seeder
-php artisan migrate:fresh --seed
+1.  **Clone the Repository**
 
-# 5️⃣ Jalankan server lokal
-php artisan serve
+    ```bash
+    git clone https://github.com/yourusername/dml-lms-fix.git
+    cd dml-lms-fix
+    ```
 
-# 6️⃣ (Opsional) Jalankan queue & schedule
-php artisan queue:work
-php artisan schedule:work
-```
+2.  **Install PHP Dependencies**
 
-> Default server berjalan di **http://localhost:8000**
+    ```bash
+    composer install
+    ```
 
-### 1.3 Struktur Branch
-- `main` → Stable production branch
-- `develop` → Active development branch
-- `feature/*` → Pengembangan fitur baru
-- `fix/*` → Perbaikan bug minor
-- `docs/*` → Update dokumentasi
+3.  **Install NPM Dependencies**
 
-### 1.4 Aturan Kontribusi
-1. Gunakan **feature branch** untuk perubahan baru.
-2. Pastikan **test lulus (`php artisan test`)** sebelum PR.
-3. Ikuti konvensi **PSR-12** dan **naming Laravel**.
-4. Sertakan deskripsi detail di Pull Request (PR).
+    ```bash
+    npm install
+    ```
 
-### 1.5 Testing Sebelum Push
-```bash
-php artisan test
-php artisan test --filter=QuizService
-```
-Gunakan `--coverage` untuk melihat cakupan uji.
+4.  **Environment Configuration**
+    Copy the example environment file and configure your database settings.
 
----
+    ```bash
+    cp .env.example .env
+    ```
 
-## 2. 📘 README.md (Root Repo)
+    Open `.env` and update your database credentials:
 
-### 2.1 Ringkasan
-**DML LMS** adalah platform pembelajaran berbasis web untuk manajemen kursus, modul, pelajaran, kuis, progres, dan sertifikasi internal perusahaan.
+    ```env
+    DB_CONNECTION=mysql
+    DB_HOST=127.0.0.1
+    DB_PORT=3306
+    DB_DATABASE=your_database_name
+    DB_USERNAME=your_username
+    DB_PASSWORD=your_password
+    ```
 
-### 2.2 Fitur Utama
-- 🎓 Course & Module Management (CRUD + publish system)
-- 🧑‍🏫 Lesson Builder (text/video/file)
-- 🧮 Quiz System (auto-scoring & attempts)
-- 🏅 Certificate Generator (PDF via queue)
-- 👥 Role-based Access (Admin, Instructor, Student)
-- 💬 Discussion Forum (nested thread)
-- 🕒 Progress Tracking & Analytics Dashboard
+5.  **Generate Application Key**
 
-### 2.3 Instalasi Cepat
-```bash
-composer install
-npm install && npm run build
-cp .env.example .env
-php artisan key:generate
-php artisan migrate:fresh --seed
-php artisan serve
-```
+    ```bash
+    php artisan key:generate
+    ```
 
-### 2.4 Kredensial Dummy (Seeder)
-| Role | Email | Password |
-|------|--------|-----------|
-| Admin | admin@dml.co.id | password |
-| Instructor | instructor@dml.co.id | password |
-| Student | student@dml.co.id | password |
+6.  **Run Migrations & Seeders**
+    Create the database tables and populate them with initial data.
 
-### 2.5 Struktur Direktori
-```
-app/
- ├── Http/
- │   ├── Controllers/
- │   ├── Middleware/
- │   └── Requests/
- ├── Models/
- ├── Services/
- ├── Policies/
- ├── Jobs/
- └── Providers/
-resources/
- ├── views/ (Blade templates)
- ├── js/ (Alpine.js components)
- └── css/ (Tailwind source)
-routes/
- ├── web.php
- ├── api.php (opsional, internal use)
-database/
- ├── migrations/
- ├── factories/
- └── seeders/
-```
+    ```bash
+    php artisan migrate --seed
+    ```
 
-### 2.6 Command Artisan Penting
-| Command | Fungsi |
-|----------|--------|
-| `php artisan migrate:fresh --seed` | Reset DB dan isi data awal |
-| `php artisan optimize` | Cache config, route, dan view |
-| `php artisan queue:work` | Jalankan worker antrian |
-| `php artisan storage:link` | Buat symbolic link ke storage publik |
-| `php artisan test` | Jalankan pengujian unit & fitur |
+7.  **Build Assets**
 
-### 2.7 Dokumentasi Lain
-| Dokumen | Keterangan |
-|----------|------------|
-| `DML LMS — Database Schema Doc.md` | Struktur & relasi DB |
-| `DML LMS — Deployment Guide.md` | Panduan server & Docker |
-| `DML LMS — Testing Plan.md` | Strategi pengujian |
-| `DML LMS — Security Policy.md` | Kebijakan keamanan |
+    ```bash
+    npm run build
+    ```
+
+    Or for development with hot reload:
+
+    ```bash
+    npm run dev
+    ```
+
+8.  **Serve the Application**
+    ```bash
+    php artisan serve
+    ```
+    Visit `http://localhost:8000` in your browser.
 
 ---
 
-## 3. ⚙️ ENV Configuration Guide
+## 🌍 Deployment Guide (Production)
 
-Berikut variabel `.env` yang **wajib dikonfigurasi** sebelum menjalankan aplikasi:
+This guide assumes you are deploying to a Linux server (Ubuntu/Debian) with **Nginx**, **PHP-FPM**, and **MySQL/MariaDB**.
 
-### 3.1 Aplikasi
-```
-APP_NAME="DML LMS"
-APP_ENV=local
-APP_KEY=base64:xxxx
-APP_DEBUG=true
-APP_URL=http://localhost:8000
-LOG_CHANNEL=stack
-LOG_LEVEL=debug
+### 1. Server Setup
+
+Ensure your server has the required software installed:
+
+```bash
+sudo apt update
+sudo apt install nginx mysql-server php8.2-fpm php8.2-cli php8.2-mysql php8.2-curl php8.2-xml php8.2-mbstring php8.2-zip unzip git supervisor
 ```
 
-### 3.2 Database
-```
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=dml_lms
-DB_USERNAME=root
-DB_PASSWORD=
+### 2. Clone & Install
+
+Navigate to your web directory and clone the project:
+
+```bash
+cd /var/www
+sudo git clone https://github.com/yourusername/dml-lms-fix.git
+cd dml-lms-fix
 ```
 
-### 3.3 Cache & Queue
-```
-CACHE_DRIVER=file
-QUEUE_CONNECTION=database
-SESSION_DRIVER=file
+Install dependencies (optimize for production):
+
+```bash
+sudo composer install --optimize-autoloader --no-dev
+sudo npm install
+sudo npm run build
 ```
 
-> Gunakan `redis` jika tersedia untuk kinerja lebih baik.
+### 3. Permissions
 
-### 3.4 Mail
-```
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.mailtrap.io
-MAIL_PORT=2525
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS="no-reply@dml.co.id"
-MAIL_FROM_NAME="DML LMS"
+Set proper permissions for the web server user (`www-data`):
+
+```bash
+sudo chown -R www-data:www-data /var/www/dml-lms-fix
+sudo chmod -R 775 /var/www/dml-lms-fix/storage
+sudo chmod -R 775 /var/www/dml-lms-fix/bootstrap/cache
 ```
 
-### 3.5 Filesystem (Storage)
-```
-FILESYSTEM_DISK=public
-# Atau gunakan AWS S3
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_DEFAULT_REGION=ap-southeast-1
-AWS_BUCKET=dml-lms-bucket
+### 4. Environment Configuration
+
+```bash
+sudo cp .env.example .env
+sudo nano .env
 ```
 
-### 3.6 Keamanan
-```
-SESSION_SECURE_COOKIE=true
-SESSION_SAMESITE=lax
+Update the following for production:
+
+```env
+APP_ENV=production
 APP_DEBUG=false
+APP_URL=https://your-domain.com
+
+DB_CONNECTION=mysql
+...
 ```
 
----
+Generate the key:
 
-## 4. 🌱 Seeder Data Reference
-
-### 4.1 Seeder Utama
-Seeder utama bernama **`LmsFullSeeder`** yang memanggil beberapa seeder lain:
-```php
-$this->call([
-    RoleSeeder::class,
-    UserSeeder::class,
-    CategorySeeder::class,
-    CourseSeeder::class,
-    ModuleSeeder::class,
-    LessonSeeder::class,
-    QuizSeeder::class,
-    EnrollmentSeeder::class,
-    ProgressSeeder::class,
-]);
-```
-
-### 4.2 RoleSeeder
-Membuat role default:
-```php
-['admin', 'instructor', 'student']
-```
-Semua role diatur dengan permission Spatie sesuai modul.
-
-### 4.3 UserSeeder
-Membuat akun contoh berikut:
-| Role | Email | Password | Keterangan |
-|------|--------|-----------|------------|
-| Admin | admin@dml.co.id | password | Dapat mengelola seluruh konten |
-| Instructor | instructor@dml.co.id | password | Mengajar & membuat kursus |
-| Student | student@dml.co.id | password | Mengikuti kursus & ujian |
-
-### 4.4 CourseSeeder & ModuleSeeder
-- Membuat minimal 3 kursus: “Basic Programming”, “Web Development”, “Data Analytics”  
-- Tiap kursus memiliki 2–3 modul, misalnya: *Introduction*, *Core Topics*, *Final Project*
-
-### 4.5 LessonSeeder
-- Mengisi setiap modul dengan 3–5 lesson (tipe text/video/file).
-- Menambahkan konten contoh:
-  ```php
-  Lesson::factory()->create([
-    'title' => 'Introduction to PHP',
-    'type' => 'video',
-    'content_url' => 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-  ]);
-  ```
-
-### 4.6 QuizSeeder
-- Setiap kursus memiliki minimal 1 quiz.
-- Quiz terdiri dari 5 pertanyaan `multiple choice`.
-- 1–2 opsi benar, skor otomatis dihitung.
-
-### 4.7 EnrollmentSeeder
-- Mendaftarkan setiap student ke 1–2 kursus acak.
-
-### 4.8 ProgressSeeder
-- Menandai sebagian lesson sebagai `completed` untuk menampilkan progres.
-
-### 4.9 CertificateSeeder (opsional)
-- Menghasilkan sertifikat otomatis untuk kursus yang telah 100% selesai.
-
-### 4.10 Tips Testing Seeder
 ```bash
-php artisan db:seed --class=LmsFullSeeder
-php artisan tinker
->>> App\Models\Course::count();
+sudo php artisan key:generate
 ```
 
----
+### 5. Database Migration
 
-## ✅ Kesimpulan
-Dokumen ini mencakup seluruh panduan developer-facing utama untuk DML LMS:  
-- Kontribusi dan setup dev environment  
-- Instalasi & struktur project  
-- Konfigurasi `.env` dan variabel penting  
-- Referensi seeder data dummy lengkap
+```bash
+sudo php artisan migrate --force
+```
 
-> Dengan mengikuti panduan ini, developer baru dapat menjalankan proyek hanya dalam **<10 menit** dengan setup yang aman, konsisten, dan siap dikembangkan lebih lanjut.
+_(Note: Use `--seed` only if this is a fresh install and you need initial data)_
 
----
-© 2025 DML — Developer Documentation
+### 6. Nginx Configuration
+
+Create a new Nginx site configuration:
+
+```bash
+sudo nano /etc/nginx/sites-available/dml-lms
+```
+
+Paste the following configuration (adjust `server_name` and paths):
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /var/www/dml-lms-fix/public;
+
+    add_header X-Frame-Options "SAMEORIGIN";
+    add_header X-Content-Type-Options "nosniff";
+
+    index index.php;
+
+    charset utf-8;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+```
+
+Enable the site and restart Nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/dml-lms /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### 7. Optimization
+
+Run these commands to cache configuration and routes for better performance:
+
+```bash
+php artisan config:cache
+php artisan event:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+### 8. Supervisor (Optional - For Queues)
+
+If your application uses queues, set up Supervisor to keep the queue worker running.
+
+```bash
+sudo nano /etc/supervisor/conf.d/dml-lms-worker.conf
+```
+
+Content:
+
+```ini
+[program:dml-lms-worker]
+process_name=%(program_name)s_%(process_num)02d
+command=php /var/www/dml-lms-fix/artisan queue:work sqs --sleep=3 --tries=3 --max-time=3600
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+numprocs=1
+redirect_stderr=true
+stdout_logfile=/var/www/dml-lms-fix/storage/logs/worker.log
+stopwaitsecs=3600
+```
+
+Start Supervisor:
+
+```bash
+sudo supervisorctl reread
+sudo supervisorctl update
+sudo supervisorctl start dml-lms-worker:*
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please fork the repository and submit a pull request.
+
+## 📄 License
+
+The MIT License (MIT). Please see [License File](LICENSE) for more information.
