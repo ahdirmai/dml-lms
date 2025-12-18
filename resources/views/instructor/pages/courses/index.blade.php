@@ -184,6 +184,12 @@
                               hover:brightness-95 focus:ring-brand w-full md:w-auto">
                         + Create
                     </a>
+                    <a href="{{ route('instructor.courses.export.scores', request()->query()) }}" class="inline-flex items-center justify-center font-semibold rounded-lg transition
+                        focus:outline-none focus:ring-2 focus:ring-offset-2 px-4 py-2 text-sm bg-white border border-gray-300 text-gray-700
+                        hover:bg-gray-50 focus:ring-brand w-full md:w-auto ml-2">
+                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                         Export Scores
+                     </a>
                 </div>
             </div>
 
@@ -317,6 +323,9 @@
                                             </x-dropdown-link>
                                             <x-dropdown-link :href="route('instructor.courses.progress', $c->id)">
                                                 Check Progress
+                                            </x-dropdown-link>
+                                            <x-dropdown-link :href="route('instructor.courses.export.single', $c->id)">
+                                                Export Scores
                                             </x-dropdown-link>
                                             <div class="border-t border-gray-100"></div>
                                             <form method="POST" action="{{ route('instructor.courses.destroy', $c->id) }}">
@@ -453,6 +462,9 @@
                                 </x-dropdown-link>
                                 <x-dropdown-link :href="route('instructor.courses.progress', $c->id)">
                                     Check Progress
+                                </x-dropdown-link>
+                                <x-dropdown-link :href="route('instructor.courses.export.single', $c->id)">
+                                    Export Scores
                                 </x-dropdown-link>
                                 <div class="border-t border-gray-100"></div>
                                 <form method="POST" action="{{ route('instructor.courses.destroy', $c->id) }}">

@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
+use App\Exports\CourseScoresExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CourseController extends Controller
 {
@@ -87,6 +89,25 @@ class CourseController extends Controller
             'sort',
             'stats'
         ));
+    }
+
+    public function exportScores(Request $request)
+    {
+        // Force instructor_id filter to current user
+        $filters = $request->all();
+        $filters['instructor_id'] = auth()->id();
+
+        return Excel::download(new CourseScoresExport($filters), 'my_courses_scores_'.date('Y-m-d_H-i').'.xlsx');
+    }
+
+    public function exportCourseScores(Course $course)
+    {
+        // Ensure course belongs to instructor
+        if ($course->instructor_id !== auth()->id()) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        return Excel::download(new CourseScoresExport(['course_id' => $course->id]), 'score_'.Str::slug($course->title).'_'.date('Y-m-d').'.xlsx');
     }
 
     public function create()

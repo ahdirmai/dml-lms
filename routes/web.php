@@ -144,6 +144,8 @@ Route::prefix('admin')
         Route::resource('tags', TagController::class)->except(['show']);
 
         // Courses
+        Route::get('courses/export/scores', [AdminCourseController::class, 'exportScores'])->name('courses.export.scores');
+        Route::get('courses/{course}/export/scores', [AdminCourseController::class, 'exportCourseScores'])->name('courses.export.single');
         Route::get('courses', [AdminCourseController::class, 'index'])->name('courses.index');
         Route::get('courses/create', [AdminCourseController::class, 'create'])->name('courses.create');
         Route::post('courses', [AdminCourseController::class, 'store'])->name('courses.store');
@@ -216,6 +218,8 @@ Route::prefix('instructor')
         Route::resource('tags', InstructorTagController::class)->except(['show']);
 
         // Courses
+        Route::get('courses/export/scores', [InstructorCourseController::class, 'exportScores'])->name('courses.export.scores');
+        Route::get('courses/{course}/export/scores', [InstructorCourseController::class, 'exportCourseScores'])->name('courses.export.single');
         Route::get('courses', [InstructorCourseController::class, 'index'])->name('courses.index');
         Route::get('courses/create', [InstructorCourseController::class, 'create'])->name('courses.create');
         Route::post('courses', [InstructorCourseController::class, 'store'])->name('courses.store');

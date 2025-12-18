@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Exports\CourseScoresExport;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CourseRequest;
 use App\Models\Lms\Category;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Maatwebsite\Excel\Facades\Excel;
 use Throwable;
 
 class CourseController extends Controller
@@ -91,6 +93,16 @@ class CourseController extends Controller
             'sort',
             'stats'
         ));
+    }
+
+    public function exportScores(Request $request)
+    {
+        return Excel::download(new CourseScoresExport($request->all()), 'courses_scores_'.date('Y-m-d_H-i').'.xlsx');
+    }
+
+    public function exportCourseScores(Course $course)
+    {
+        return Excel::download(new CourseScoresExport(['course_id' => $course->id]), 'score_'.Str::slug($course->title).'_'.date('Y-m-d').'.xlsx');
     }
 
     public function create()
