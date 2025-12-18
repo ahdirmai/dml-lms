@@ -78,7 +78,9 @@ class CourseScoresExport implements FromQuery, WithHeadings, WithMapping, Should
             'Nama Peserta',
             'Nama Kelas',
             'Pretest',
+            'Waktu Pretest',
             'Posttest',
+            'Waktu Posttest',
         ];
     }
 
@@ -91,7 +93,9 @@ class CourseScoresExport implements FromQuery, WithHeadings, WithMapping, Should
         $course = $enrollment->course;
         
         $pretestScore = '-';
+        $pretestTime = '-';
         $posttestScore = '-';
+        $posttestTime = '-';
 
         if ($course && $pretest = $course->pretest) {
             // Using accessor from Enrollment if efficient, or query manually
@@ -105,6 +109,7 @@ class CourseScoresExport implements FromQuery, WithHeadings, WithMapping, Should
                 ->first();
              if ($attempt) {
                  $pretestScore = $attempt->score;
+                 $pretestTime = $attempt->finished_at ? $attempt->finished_at->format('Y-m-d H:i') : '-';
              }
         }
 
@@ -115,6 +120,7 @@ class CourseScoresExport implements FromQuery, WithHeadings, WithMapping, Should
                 ->first();
              if ($attempt) {
                  $posttestScore = $attempt->score;
+                 $posttestTime = $attempt->finished_at ? $attempt->finished_at->format('Y-m-d H:i') : '-';
              }
         }
 
@@ -122,7 +128,9 @@ class CourseScoresExport implements FromQuery, WithHeadings, WithMapping, Should
             $user->name ?? 'Unknown User',
             $course->title ?? 'Unknown Course',
             $pretestScore,
+            $pretestTime,
             $posttestScore,
+            $posttestTime,
         ];
     }
 }
