@@ -6,10 +6,10 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreCategoryRequest extends FormRequest
 {
-
     public function authorize(): bool
     {
         $u = $this->user();
+
         return $u && (($u->active_role === 'admin') || $u->can('categories.manage'));
     }
 
@@ -23,7 +23,7 @@ class StoreCategoryRequest extends FormRequest
             'name' => ['required', 'string', 'max:150'],
             'slug' => ['nullable', 'string', 'max:191', 'unique:categories,slug'],
             'description' => ['nullable', 'string'],
-            'created_by' => ['required', 'exists:users,id']
+            // 'created_by' => ['required', 'exists:users,id'],
 
         ];
     }
