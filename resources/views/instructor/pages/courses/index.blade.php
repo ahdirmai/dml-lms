@@ -195,7 +195,7 @@
 
             {{-- ===== TABLE (Desktop/Tablet) ===== --}}
             <div class="bg-white shadow sm:rounded-lg hidden md:block">
-                <div class="p-4 overflow-x-auto">
+                <div class="p-4 overflow-x-auto pb-32">
                     <table class="min-w-full text-sm text-left divide-y divide-soft">
                         <thead class="bg-gray-50">
                             <tr>

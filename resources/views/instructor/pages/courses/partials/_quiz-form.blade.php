@@ -119,9 +119,9 @@ return; @endphp
         </button>
 
         @endif
-        <a href="{{ url('/storage/templates/quiz_import_template.xlsx') }}"
-            class="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700" download>
-            Download Template
+        <a href="{{ route($prefix . '.courses.quizzes.template') }}"
+            class="px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700">
+            Download Template (Excel)
         </a>
 
         {{-- Hanya tampil di POSTTEST: Copy dari Pretest --}}

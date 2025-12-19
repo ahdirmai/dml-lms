@@ -302,6 +302,32 @@ class CourseController extends Controller
                 ->withInput();
         }
 
+        // --- ADDED: Check Passing Logic ---
+        // Jika course punya posttest, user HARUS PASSED posttest dulu.
+        if ($course->has_posttest) {
+            if ($course->posttest) {
+                // Cek apakah pernah lulus
+                $hasPassed = QuizAttempt::where('quiz_id', $course->posttest->id)
+                    ->where('user_id', $user->id)
+                    ->where('passed', true)
+                    ->exists();
+
+                if (! $hasPassed) {
+                    return redirect()
+                        ->route('user.courses.show', $course->id)
+                        ->with('error', 'Anda belum lulus Post Test. Silakan selesaikan Post Test dengan nilai di atas KKM sebelum memberikan ulasan.');
+                }
+            } else {
+                // Edge case: flag has_posttest true, tapi datanya null (error data).
+                // Log and allow? Or block? Better block to be safe or maybe allow if tech issue.
+                // Let's allow but log, or simply ignore check.
+                // For now, let's assume if data is missing, we skip check.
+            }
+        }
+        // Jika TIDAK punya posttest, mungkin logic lain (misal semua lesson complete).
+        // Tapi request user spesifik: "Check Passing Grade".
+        // ----------------------------------
+
         try {
             DB::transaction(function () use ($request, $course, $user) {
                 $enrollment = Enrollment::where('user_id', $user->id)
@@ -309,9 +335,13 @@ class CourseController extends Controller
                     ->firstOrFail();
 
                 $enrollment->review_stars = $request->input('stars');
-                // Anggap review dilakukan setelah selesai semua, tandai completed
-                $enrollment->status = 'completed';
-                $enrollment->completed_at = now();
+                
+                // Hanya set completed jika belum completed (agar timestamp tidak berubah terus)
+                if ($enrollment->status !== 'completed') {
+                    $enrollment->status = 'completed';
+                    $enrollment->completed_at = now();
+                }
+                
                 $enrollment->save();
             });
 

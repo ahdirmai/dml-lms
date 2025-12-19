@@ -59,9 +59,10 @@ class CourseProgressController extends Controller
             $progress  = round(($completed / $total) * 100);
             
             // last activity: ambil max last_activity_at di lesson_progress enrollment tsb
-            $lastActivity = optional(
-                LessonProgress::where('enrollment_id', $en->id)->max('last_activity_at')
-            )->format('Y-m-d H:i');
+            $lastActivityVal = LessonProgress::where('enrollment_id', $en->id)->max('last_activity_at');
+            $lastActivity = $lastActivityVal 
+                ? \Carbon\Carbon::parse($lastActivityVal)->format('Y-m-d H:i') 
+                : '-';
 
             return [
                 'name'              => $en->user->name,

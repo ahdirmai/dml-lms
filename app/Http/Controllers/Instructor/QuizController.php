@@ -380,4 +380,9 @@ class QuizController extends Controller
         }
         return back()->with('success', "Berhasil import pertanyaan untuk {$kind}.");
     }
+
+    public function downloadTemplate()
+    {
+        return FacadesExcel::download(new \App\Exports\QuizTemplateExport, 'quiz_import_template.xlsx');
+    }
 }

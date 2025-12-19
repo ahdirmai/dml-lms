@@ -3,60 +3,55 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Imports\QuizQuestionsImport;
 use App\Models\Lms\Course;
-use App\Models\Lms\Lesson;
 use App\Models\Lms\Quiz;
-use App\Models\Lms\QuizQuestion;
 use App\Models\Lms\QuizOption;
+use App\Models\Lms\QuizQuestion;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Excel;
+use Illuminate\Support\Str;
 use Maatwebsite\Excel\Facades\Excel as FacadesExcel;
 use Throwable;
 
 class QuizController extends Controller
 {
-
-
     public function storeQuestion(Request $request, Quiz $quiz)
     {
         // return [$request->all(), $quiz];
 
         $data = $request->validate([
-            'prompt'        => ['required', 'string', 'max:1000'],
-            'points'        => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'order'         => ['nullable', 'integer', 'min:0', 'max:10000'],
-            'options'       => ['required', 'array', 'min:2', 'max:10'],
+            'prompt' => ['required', 'string', 'max:1000'],
+            'points' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'options' => ['required', 'array', 'min:2', 'max:10'],
             'options.*.text' => ['required', 'string', 'max:500'],
             'correct_index' => ['required', 'integer', 'min:0'],
         ]);
 
         DB::transaction(function () use ($quiz, $data) {
             $question = QuizQuestion::create([
-                'id'      => (string) Str::uuid(),
+                'id' => (string) Str::uuid(),
                 'quiz_id' => $quiz->id,
-                'question_text'  => $data['prompt'],
-                'score'  => $data['points'] ?? 1,
-                'order'   => $data['order'] ?? ($quiz->questions()->max('order') + 1),
+                'question_text' => $data['prompt'],
+                'score' => $data['points'] ?? 1,
+                'order' => $data['order'] ?? ($quiz->questions()->max('order') + 1),
             ]);
 
             foreach ($data['options'] as $idx => $opt) {
                 QuizOption::create([
-                    'id'          => (string) Str::uuid(),
+                    'id' => (string) Str::uuid(),
                     'question_id' => $question->id,
-                    'option_text'        => $opt['text'],
-                    'is_correct'  => $idx === (int) $data['correct_index'],
+                    'option_text' => $opt['text'],
+                    'is_correct' => $idx === (int) $data['correct_index'],
                 ]);
             }
 
             $quiz->update([
-                'total_questions' => $quiz->total_questions += 1
+                'total_questions' => $quiz->total_questions += 1,
             ]);
         });
         $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
+
         return redirect()
             ->route('admin.courses.edit', [$quiz->quizzable_id, 'tab' => $tab]) // quizzable_id = course_id
             ->with('success', 'Pertanyaan berhasil disimpan.');
@@ -66,11 +61,11 @@ class QuizController extends Controller
     {
         abort_unless($question->quiz_id === $quiz->id, 404);
         $data = $request->validate([
-            'prompt'        => ['required', 'string', 'max:1000'],
-            'points'        => ['nullable', 'integer', 'min:0', 'max:1000'],
-            'order'         => ['nullable', 'integer', 'min:0', 'max:10000'],
-            'options'       => ['required', 'array', 'min:2', 'max:10'],
-            'options.*.id'  => ['nullable', 'uuid'],     // boleh kosong untuk opsi baru
+            'prompt' => ['required', 'string', 'max:1000'],
+            'points' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'order' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'options' => ['required', 'array', 'min:2', 'max:10'],
+            'options.*.id' => ['nullable', 'uuid'],     // boleh kosong untuk opsi baru
             'options.*.text' => ['required', 'string', 'max:500'],
             'correct_index' => ['required', 'integer', 'min:0'],
         ]);
@@ -79,19 +74,19 @@ class QuizController extends Controller
             $question->update([
                 'option_text' => $data['prompt'],
                 'score' => $data['points'] ?? 1,
-                'order'  => $data['order'] ?? $question->order,
+                'order' => $data['order'] ?? $question->order,
             ]);
 
             $keepIds = [];
             foreach ($data['options'] as $idx => $opt) {
                 $isCorrect = $idx === (int) $data['correct_index'];
 
-                if (!empty($opt['id'])) {
+                if (! empty($opt['id'])) {
                     // update existing
                     $option = QuizOption::where('question_id', $question->id)->where('id', $opt['id'])->first();
                     if ($option) {
                         $option->update([
-                            'option_text'       => $opt['text'],
+                            'option_text' => $opt['text'],
                             'is_correct' => $isCorrect,
                         ]);
                         $keepIds[] = $option->id;
@@ -99,10 +94,10 @@ class QuizController extends Controller
                 } else {
                     // create new
                     $option = QuizOption::create([
-                        'id'          => (string) Str::uuid(),
+                        'id' => (string) Str::uuid(),
                         'question_id' => $question->id,
-                        'option_text'        => $opt['text'],
-                        'is_correct'  => $isCorrect,
+                        'option_text' => $opt['text'],
+                        'is_correct' => $isCorrect,
                     ]);
                     $keepIds[] = $option->id;
                 }
@@ -130,7 +125,7 @@ class QuizController extends Controller
         });
 
         $quiz->update([
-            'total_questions' => $quiz->total_questions -= 1
+            'total_questions' => $quiz->total_questions -= 1,
         ]);
         $tab = $quiz->quiz_kind === 'posttest' ? 'posttest' : 'pretest';
 
@@ -139,13 +134,12 @@ class QuizController extends Controller
             ->with('success', 'Pertanyaan berhasil disimpan.');
     }
 
-
     // Opsional: drag-sort urutan pertanyaan
     public function reorderQuestions(Request $request, Quiz $quiz)
     {
         $payload = $request->validate([
-            'orders'   => ['required', 'array'],
-            'orders.*.id'    => ['required', 'uuid'],
+            'orders' => ['required', 'array'],
+            'orders.*.id' => ['required', 'uuid'],
             'orders.*.order' => ['required', 'integer', 'min:0', 'max:10000'],
         ]);
 
@@ -165,10 +159,12 @@ class QuizController extends Controller
         if ($type === 'truefalse') {
             return strtolower((string) $correct) === strtolower($text);
         }
-        if (is_numeric($correct)) return (int) $correct === $idx;
+        if (is_numeric($correct)) {
+            return (int) $correct === $idx;
+        }
+
         return is_string($correct) && trim($correct) === trim($text);
     }
-
 
     // app/Http/Controllers/Admin/QuizController.php
     public function storePretest(Request $request, Course $course)
@@ -190,11 +186,11 @@ class QuizController extends Controller
     {
         // Validasi field form dari _quiz-form.blade.php
         $data = $request->validate([
-            'title'               => ['required', 'string', 'max:200'],
-            'time_limit_seconds'  => ['nullable', 'integer', 'min:10', 'max:86400'],
-            'shuffle_questions'   => ['nullable', 'boolean'],
-            'shuffle_options'     => ['nullable', 'boolean'],
-            'passing_score'       => ['nullable', 'integer', 'min:0', 'max:100'], // opsional kalau kamu pakai
+            'title' => ['required', 'string', 'max:200'],
+            'time_limit_seconds' => ['nullable', 'integer', 'min:10', 'max:86400'],
+            'shuffle_questions' => ['nullable', 'boolean'],
+            'shuffle_options' => ['nullable', 'boolean'],
+            'passing_score' => ['nullable', 'integer', 'min:0', 'max:100'], // opsional kalau kamu pakai
         ]);
 
         try {
@@ -204,16 +200,16 @@ class QuizController extends Controller
             /** @var Quiz|null $quiz */
             $quiz = Quiz::query()
                 ->where('quizzable_type', Course::class)
-                ->where('quizzable_id',   $course->id)
-                ->where('quiz_kind',      $kind)            // 'pretest' | 'posttest'
+                ->where('quizzable_id', $course->id)
+                ->where('quiz_kind', $kind)            // 'pretest' | 'posttest'
                 ->lockForUpdate()
                 ->first();
 
             $payload = [
-                'title'               => $data['title'],
-                'time_limit_seconds'  => $data['time_limit_seconds'] ?? null,
-                'shuffle_questions'   => (int) $request->boolean('shuffle_questions'),
-                'shuffle_options'     => (int) $request->boolean('shuffle_options'),
+                'title' => $data['title'],
+                'time_limit_seconds' => $data['time_limit_seconds'] ?? null,
+                'shuffle_questions' => (int) $request->boolean('shuffle_questions'),
+                'shuffle_options' => (int) $request->boolean('shuffle_options'),
             ];
 
             if (array_key_exists('passing_score', $data)) {
@@ -227,19 +223,19 @@ class QuizController extends Controller
             } else {
                 // Create baru terikat ke Course
                 $quiz = Quiz::create(array_merge($payload, [
-                    'id'              => (string) Str::uuid(),
-                    'quiz_kind'       => $kind,                   // 'pretest' / 'posttest'
-                    'quizzable_type'  => Course::class,
-                    'quizzable_id'    => $course->id,
+                    'id' => (string) Str::uuid(),
+                    'quiz_kind' => $kind,                   // 'pretest' / 'posttest'
+                    'quizzable_type' => Course::class,
+                    'quizzable_id' => $course->id,
                 ]));
             }
 
             // update course setting set crouse passing grade (pretest postest)
             if ($kind === 'pretest') {
-                # code...
+                // code...
                 $course->update([
                     'default_passing_score' => $payload['passing_score'],
-                    'pretest_passing_score' => $payload['passing_score']
+                    'pretest_passing_score' => $payload['passing_score'],
                 ]);
             } else {
                 $course->update(['posttest_passing_score' => $payload['passing_score']]);
@@ -250,22 +246,23 @@ class QuizController extends Controller
 
             return redirect()
                 ->route('admin.courses.edit', [$quiz->quizzable_id, 'tab' => $tab]) // quizzable_id = course_id
-                ->with('success', ucfirst($kind) . ' berhasil disimpan.');
+                ->with('success', ucfirst($kind).' berhasil disimpan.');
         } catch (Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal menyimpan ' . $kind . ': ' . $e->getMessage());
+
+            return back()->with('error', 'Gagal menyimpan '.$kind.': '.$e->getMessage());
         }
     }
 
     public function syncFromPretest(Request $request, Course $course)
     {
-        $pretest  = $course->pretest;
+        $pretest = $course->pretest;
         $posttest = $course->posttest;
 
-        if (!$pretest) {
+        if (! $pretest) {
             return back()->with('error', 'Pretest belum dibuat untuk kursus ini.');
         }
-        if (!$posttest) {
+        if (! $posttest) {
             return back()->with('error', 'Posttest belum dibuat untuk kursus ini.');
         }
 
@@ -284,19 +281,19 @@ class QuizController extends Controller
             foreach ($preQuestions as $q) {
                 /** @var QuizQuestion $newQ */
                 $newQ = QuizQuestion::create([
-                    'id'            => (string) Str::uuid(),
-                    'quiz_id'       => $posttest->id,
+                    'id' => (string) Str::uuid(),
+                    'quiz_id' => $posttest->id,
                     'question_text' => $q->question_text,
-                    'points'        => $q->points,
-                    'order'         => $q->order,
+                    'points' => $q->points,
+                    'order' => $q->order,
                 ]);
 
                 foreach ($q->options as $opt) {
                     QuizOption::create([
-                        'id'          => (string) Str::uuid(),
+                        'id' => (string) Str::uuid(),
                         'question_id' => $newQ->id,
                         'option_text' => $opt->option_text,
-                        'is_correct'  => $opt->is_correct,
+                        'is_correct' => $opt->is_correct,
                     ]);
                 }
             }
@@ -305,8 +302,6 @@ class QuizController extends Controller
         });
 
         // return $posttest;
-
-
 
         // Jika ingin tetap di tab posttest, boleh tambahkan query ?tab=posttest
         return redirect()
@@ -327,11 +322,11 @@ class QuizController extends Controller
             ->where('quiz_kind', $kind)
             ->first();
 
-        if (!$quiz) {
+        if (! $quiz) {
             return back()->with('error', "Quiz {$kind} belum dibuat untuk kursus ini.");
         }
 
-        $replace = (bool)($data['replace_existing'] ?? false);
+        $replace = (bool) ($data['replace_existing'] ?? false);
         $import = new \App\Imports\QuizQuestionsImport($quiz, $replace);
 
         try {
@@ -339,7 +334,7 @@ class QuizController extends Controller
             FacadesExcel::import($import, $data['file']);
         } catch (\Throwable $e) {
             // Error global (misal file corrupt)
-            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+            return back()->with('error', 'Gagal import: '.$e->getMessage());
         }
 
         // Kumpulkan semua error & failure agar ditampilkan
@@ -349,7 +344,7 @@ class QuizController extends Controller
         foreach ($import->failures() as $failure) {
             // $failure->row(), $failure->attribute(), $failure->errors()
             $attr = $failure->attribute(); // nama kolom
-            $row  = $failure->row();       // nomor baris (termasuk header)
+            $row = $failure->row();       // nomor baris (termasuk header)
             foreach ($failure->errors() as $err) {
                 $messages[] = "Row {$row} [{$attr}]: {$err}";
             }
@@ -360,11 +355,17 @@ class QuizController extends Controller
             $messages[] = $msg;
         }
 
-        if (!empty($messages)) {
+        if (! empty($messages)) {
             // Tampilkan daftar error ke user
-            return back()->with('error', "Beberapa baris gagal diimport:")
+            return back()->with('error', 'Beberapa baris gagal diimport:')
                 ->with('import_errors', $messages);
         }
+
         return back()->with('success', "Berhasil import pertanyaan untuk {$kind}.");
+    }
+
+    public function downloadTemplate()
+    {
+        return FacadesExcel::download(new \App\Exports\QuizTemplateExport, 'quiz_import_template.xlsx');
     }
 }

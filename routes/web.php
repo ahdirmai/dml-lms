@@ -184,10 +184,13 @@ Route::prefix('admin')
             ->name('courses.posttest.copyFromPretest');
 
         Route::post(
-            'courses/{course}/quizzes/{kind}/import', // <--- SALAH
+            'courses/{course}/quizzes/{kind}/import',
             [AdminQuizController::class, 'importByKind']
         )
             ->name('courses.quizzes.import');
+
+        Route::get('courses/quizzes/template', [AdminQuizController::class, 'downloadTemplate'])
+            ->name('courses.quizzes.template');
         // Route::post('lessons/{lesson}/quiz', [AdminQuizController::class, 'upsert'])->name('quizzes.upsert');
         // Route::post('quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->name('quizzes.questions.store');
         // Route::patch('questions/{question}', [AdminQuizController::class, 'updateQuestion'])->name('quizzes.questions.update');
@@ -256,6 +259,8 @@ Route::prefix('instructor')
 
         Route::post('courses/{course}/quizzes/{kind}/import', [InstructorQuizController::class, 'importByKind'])
             ->name('courses.quizzes.import');
+        Route::get('courses/quizzes/template', [InstructorQuizController::class, 'downloadTemplate'])
+            ->name('courses.quizzes.template');
 
         // Assignments
         Route::get('courses/{course}/assign-students', [InstructorCourseAssignController::class, 'form'])->name('courses.assign');
