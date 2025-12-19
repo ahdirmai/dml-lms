@@ -14,6 +14,55 @@
             <div class="mb-4 p-3 rounded bg-red-100 text-red-800">{{ session('error') }}</div>
             @endif
 
+            {{-- Filters --}}
+            <div class="bg-white p-4 rounded-lg shadow mb-4">
+                <form action="{{ route('admin.user-activity.index') }}" method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    {{-- Search --}}
+                    <div>
+                        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+                        <x-text-input id="search" name="search" type="text" class="w-full text-sm" placeholder="User, Desc..." :value="request('search')" />
+                    </div>
+
+                    {{-- Type --}}
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Activity Type</label>
+                        <select id="type" name="type" class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm text-sm">
+                            <option value="">All Types</option>
+                            @foreach($types as $type)
+                                <option value="{{ $type }}" {{ request('type') == $type ? 'selected' : '' }}>{{ $type }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Date From --}}
+                    <div>
+                        <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+                        <x-text-input id="date_from" name="date_from" type="date" class="w-full text-sm" :value="request('date_from')" />
+                    </div>
+
+                    {{-- Date To --}}
+                    <div>
+                        <label for="date_to" class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+                        <div class="flex gap-2">
+                            <x-text-input id="date_to" name="date_to" type="date" class="w-full text-sm" :value="request('date_to')" />
+                            
+                            <button type="submit" class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                Filter
+                            </button>
+                            
+                            @if(request()->anyFilled(['search', 'type', 'date_from', 'date_to']))
+                            <a href="{{ route('admin.user-activity.index') }}" class="inline-flex items-center px-3 py-2 bg-gray-200 border border-transparent rounded-md font-semibold text-xs text-gray-700 uppercase tracking-widest hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition ease-in-out duration-150" title="Reset Filters">
+                                <span class="sr-only">Reset</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </a>
+                            @endif
+                        </div>
+                    </div>
+                </form>
+            </div>
+
             {{-- ===== Header List ===== --}}
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
                 <div class="text-sm text-dark/60 order-2 md:order-1">
