@@ -537,6 +537,7 @@ class UserCourseService
 
         return [
             'score' => $score,
+            'passed' => $attempt->passed,
             'total' => 100,
             'date' => optional($attempt->finished_at)->format('d M Y'),
             'badge' => $badge,

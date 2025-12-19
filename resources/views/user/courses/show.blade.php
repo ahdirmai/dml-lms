@@ -66,8 +66,8 @@
     $preDone = !empty($pretestResult); // sudah punya attempt pretest
     $postDone = !empty($posttestResult); // sudah punya attempt posttest
 
-    // aturan sederhana: boleh review kalau sudah ada post-test
-    $canReview = $postDone;
+    // aturan sederhana: boleh review kalau sudah ada post-test DAN lulus
+    $canReview = $postDone && ($posttestResult['passed'] ?? false);
     @endphp
     <div class="bg-soft/60">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-0 py-6 sm:py-8 lg:py-10 space-y-6 lg:space-y-8">

@@ -4,10 +4,8 @@ namespace App\Services\Integration;
 
 use App\Models\User;
 use App\Models\UserProfile;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use InvalidArgumentException;
 
 class UserSyncService
@@ -41,10 +39,10 @@ class UserSyncService
 
             $userData = [
                 'external_id' => $externalId,
-                'name'        => $payload['full_name'] ?? $payload['name'] ?? $email,
-                'email'       => $email,
-                'lms_status'  => $this->mapStatus($payload['status'] ?? null),
-                'password' => Hash::make('password')
+                'name' => $payload['full_name'] ?? $payload['name'] ?? $email,
+                'email' => $email,
+                'lms_status' => $this->mapStatus($payload['status'] ?? null),
+                'password' => Hash::make('password'),
             ];
 
             $action = 'created';
@@ -59,12 +57,12 @@ class UserSyncService
 
             // 2. Upsert profile (tabel user_profiles)
             $profileData = [
-                'department'          => $payload['department'] ?? null,
-                'job_title'           => $payload['job_title'] ?? null,
+                'department' => $payload['department'] ?? null,
+                'job_title' => $payload['job_title'] ?? null,
                 'manager_external_id' => $payload['manager_external_id'] ?? null,
-                'is_employee'         => (bool) ($payload['is_employee'] ?? true),
-                'is_hr'               => (bool) ($payload['is_hr'] ?? false),
-                'raw_payload'         => $payload['raw'] ?? $payload,
+                'is_employee' => (bool) ($payload['is_employee'] ?? true),
+                'is_hr' => (bool) ($payload['is_hr'] ?? false),
+                'raw_payload' => $payload['raw'] ?? $payload,
             ];
 
             /** @var UserProfile $profile */

@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
 use Throwable;
 
@@ -15,7 +15,7 @@ class UsersController extends Controller
 {
     public function index(Request $request)
     {
-        $q    = $request->string('q')->toString();
+        $q = $request->string('q')->toString();
         $role = $request->string('role')->toString();
 
         $users = User::query()
@@ -26,7 +26,7 @@ class UsersController extends Controller
                 });
             })
             ->when($role, function ($query) use ($role) {
-                $query->whereHas('roles', fn($qr) => $qr->where('name', $role));
+                $query->whereHas('roles', fn ($qr) => $qr->where('name', $role));
             })
             ->with('roles:id,name')
             ->latest('id')
@@ -41,26 +41,27 @@ class UsersController extends Controller
     public function create()
     {
         $roles = Role::query()->orderBy('name')->pluck('name');
+
         return view('admin.pages.users.create', compact('roles'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
-            'password' => ['required', 'string', 'min:8'],
-            'roles'    => ['nullable', 'array'],
-            'roles.*'  => ['string', Rule::exists('roles', 'name')],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['nullable', 'string', 'min:8'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['string', Rule::exists('roles', 'name')],
         ]);
 
         try {
             DB::beginTransaction();
 
-            $user = new User();
-            $user->name  = $data['name'];
+            $user = new User;
+            $user->name = $data['name'];
             $user->email = $data['email'];
-            $user->password = Hash::make($data['password']);
+            $user->password = Hash::make($data['password'] ?? 'password');
             $user->email_verified_at = now();
             $user->save();
 
@@ -85,7 +86,7 @@ class UsersController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create user: ' . $e->getMessage());
+                ->with('error', 'Failed to create user: '.$e->getMessage());
         }
     }
 
@@ -93,17 +94,18 @@ class UsersController extends Controller
     {
         $roles = Role::query()->orderBy('name')->pluck('name');
         $userRoles = $user->roles->pluck('name')->toArray();
+
         return view('admin.pages.users.edit', compact('user', 'roles', 'userRoles'));
     }
 
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'name'        => ['required', 'string', 'max:255'],
-            'email'       => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'password'    => ['nullable', 'string', 'min:8'],
-            'roles'       => ['nullable', 'array'],
-            'roles.*'     => ['string', Rule::exists('roles', 'name')],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:8'],
+            'roles' => ['nullable', 'array'],
+            'roles.*' => ['string', Rule::exists('roles', 'name')],
             'active_role' => ['nullable', Rule::in($request->input('roles', []))],
         ]);
 
@@ -116,9 +118,9 @@ class UsersController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            $fresh->name  = $data['name'];
+            $fresh->name = $data['name'];
             $fresh->email = $data['email'];
-            if (!empty($data['password'])) {
+            if (! empty($data['password'])) {
                 $fresh->password = Hash::make($data['password']);
             }
             $fresh->save();
@@ -156,7 +158,7 @@ class UsersController extends Controller
 
             return back()
                 ->withInput()
-                ->with('error', 'Failed to update user: ' . $e->getMessage());
+                ->with('error', 'Failed to update user: '.$e->getMessage());
         }
     }
 
@@ -187,7 +189,7 @@ class UsersController extends Controller
         } catch (Throwable $e) {
             DB::rollBack();
 
-            return back()->with('error', 'Failed to delete user: ' . $e->getMessage());
+            return back()->with('error', 'Failed to delete user: '.$e->getMessage());
         }
     }
 }
