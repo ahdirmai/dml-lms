@@ -40,9 +40,10 @@ class UserSyncService
             $userData = [
                 'external_id' => $externalId,
                 'name' => $payload['full_name'] ?? $payload['name'] ?? $email,
+                'username' => $payload['username'] ?? str_replace(' ', '', $payload['full_name'] ?? $payload['name']),
                 'email' => $email,
                 'lms_status' => $this->mapStatus($payload['status'] ?? null),
-                'password' => Hash::make('password'),
+                'password' => isset($payload['password']) ? Hash::make($payload['password']) : Hash::make('password'),
             ];
 
             $action = 'created';

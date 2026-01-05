@@ -72,6 +72,7 @@ class UserIntegrationController extends Controller
 
             return [
                 'external_id'  => $externalId,
+                'username'     => $u['username'] ?? null,
                 'full_name'    => $u['full_name'] ?? null,
                 'email'        => $u['email'] ?? null,
                 'department'   => $u['department'] ?? null,

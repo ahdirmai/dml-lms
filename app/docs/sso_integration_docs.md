@@ -37,8 +37,10 @@ The Internal System should return a JSON response with a list of users.
     "data": [
         {
             "employee_id": "EMP001", // Required (mapped to external_id)
+            "username": "johndoe", // Recommended
             "full_name": "John Doe", // Required
             "email": "john@example.com", // Required
+            "password": "plain-password-or-hash", // Optional (will be hashed if synced)
             "department": "IT",
             "job_title": "Developer",
             "manager_external_id": "EMP999",
@@ -55,8 +57,10 @@ The Internal System should return a JSON response with a list of users.
 | Internal System Field         | LMS Field                  | Notes                                         |
 | :---------------------------- | :------------------------- | :-------------------------------------------- |
 | `employee_id` / `external_id` | `users.external_id`        | **Unique Identifier**. Used for SSO matching. |
+| `username`                    | `users.username`           | Used for login.                               |
 | `full_name` / `name`          | `users.name`               |                                               |
 | `email`                       | `users.email`              |                                               |
+| `password`                    | `users.password`           | Will be hashed before saving.                 |
 | `department`                  | `user_profiles.department` |                                               |
 | `job_title`                   | `user_profiles.job_title`  |                                               |
 | `is_employee`                 | Role: `student`            | If `true`, user gets `student` role.          |
