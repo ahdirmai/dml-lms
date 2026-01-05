@@ -58,22 +58,21 @@
                 <form method="POST" action="{{ route('login') }}" class="space-y-6">
                     @csrf
 
-                    <!-- Email Address -->
+                    <!-- Username -->
                     <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Email address</label>
+                        <label for="username" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
                         <div class="mt-1 relative rounded-md shadow-sm">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
                                 </svg>
                             </div>
-                            <input id="email" name="email" type="email" autocomplete="email" required 
+                            <input id="username" name="username" type="text" autocomplete="username" required 
                                 class="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg leading-5 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition duration-150 ease-in-out" 
-                                placeholder="you@example.com"
-                                value="{{ old('email') }}" autofocus>
+                                placeholder="Username"
+                                value="{{ old('username') }}" autofocus>
                         </div>
-                        <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                        <x-input-error :messages="$errors->get('username')" class="mt-2" />
                     </div>
 
                     <!-- Password -->

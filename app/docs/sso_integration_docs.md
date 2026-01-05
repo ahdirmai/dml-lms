@@ -129,3 +129,13 @@ SSO_PUBLIC_KEY="-----BEGIN PUBLIC KEY...-----"
 # OR if using HS256
 # SSO_SECRET=your-secret-key
 ```
+
+## 4. Security Requirements (Import API)
+
+- **Authentication**: Use API Key Filter.
+- **Header**: LMS will send `X-API-KEY` header on every request.
+
+## 5. Error Handling (Import API)
+
+- **200 OK**: If data is found or if no data matches the filter (return JSON `{"data": []}`).
+- **401 Unauthorized**: If API Key is invalid or missing.
