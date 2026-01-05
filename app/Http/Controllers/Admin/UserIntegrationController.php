@@ -3,16 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\IntegrationLog;
 use App\Models\User;
 use App\Models\UserImportSession;
-use App\Models\IntegrationLog;
 use App\Services\Integration\InternalUserService;
 use App\Services\Integration\UserSyncService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Carbon\Carbon;
 
 class UserIntegrationController extends Controller
 {
@@ -39,14 +39,14 @@ class UserIntegrationController extends Controller
     {
         $validated = $request->validate([
             'department' => ['nullable', 'string', 'max:255'],
-            'status'     => ['nullable', 'string', 'max:50'], // mis: active/inactive
-            'limit'      => ['nullable', 'integer', 'min:1', 'max:1000'],
+            'status' => ['nullable', 'string', 'max:50'], // mis: active/inactive
+            'limit' => ['nullable', 'integer', 'min:1', 'max:1000'],
         ]);
 
         $filters = [
             'department' => $validated['department'] ?? null,
-            'status'     => $validated['status'] ?? null,
-            'limit'      => $validated['limit'] ?? 100,
+            'status' => $validated['status'] ?? null,
+            'limit' => $validated['limit'] ?? 100,
         ];
 
         // 1. Panggil API internal untuk ambil user (array of associative array)
@@ -71,15 +71,15 @@ class UserIntegrationController extends Controller
             $externalId = $u['external_id'] ?? null;
 
             return [
-                'external_id'  => $externalId,
-                'username'     => $u['username'] ?? null,
-                'full_name'    => $u['full_name'] ?? null,
-                'email'        => $u['email'] ?? null,
-                'department'   => $u['department'] ?? null,
-                'job_title'    => $u['job_title'] ?? null,
-                'is_employee'  => (bool)($u['is_employee'] ?? true),
-                'is_hr'        => (bool)($u['is_hr'] ?? false),
-                'status'       => $u['status'] ?? null,
+                'external_id' => $externalId,
+                'username' => $u['username'] ?? null,
+                'full_name' => $u['full_name'] ?? null,
+                'email' => $u['email'] ?? null,
+                'department' => $u['department'] ?? null,
+                'job_title' => $u['job_title'] ?? null,
+                'is_employee' => (bool) ($u['is_employee'] ?? true),
+                'is_hr' => (bool) ($u['is_hr'] ?? false),
+                'status' => $u['status'] ?? null,
                 'already_exists' => $externalId && $existingUsers->has($externalId),
             ];
         })->values()->all();
@@ -89,28 +89,28 @@ class UserIntegrationController extends Controller
         $sessionToken = Str::uuid()->toString();
 
         $session = UserImportSession::create([
-            'admin_id'      => $adminId,
+            'admin_id' => $adminId,
             'session_token' => $sessionToken,
-            'filters'       => $filters,
-            'payload'       => $externalUsers,   // simpan full payload dari internal
+            'filters' => $filters,
+            'payload' => $externalUsers,   // simpan full payload dari internal
             'total_records' => count($externalUsers),
-            'expires_at'    => Carbon::now()->addHours(1), // misal expired 1 jam
+            'expires_at' => Carbon::now()->addHours(1), // misal expired 1 jam
         ]);
 
         // 5. Optionally log aktivitas
         IntegrationLog::create([
-            'admin_id'    => $adminId,
-            'source'      => 'internal_system',
-            'action'      => 'import_preview',
-            'status'      => 'success',
-            'message'     => 'Preview users: ' . $session->total_records,
+            'admin_id' => $adminId,
+            'source' => 'internal_system',
+            'action' => 'import_preview',
+            'status' => 'success',
+            'message' => 'Preview users: '.$session->total_records,
         ]);
 
         return response()->json([
-            'success'          => true,
+            'success' => true,
             'import_session_id' => $sessionToken,
-            'total'            => count($previewData),
-            'data'             => $previewData,
+            'total' => count($previewData),
+            'data' => $previewData,
         ]);
     }
 
@@ -123,12 +123,12 @@ class UserIntegrationController extends Controller
     public function import(Request $request, UserSyncService $userSyncService)
     {
         $validated = $request->validate([
-            'import_session_id'      => ['required', 'string'],
-            'selected_external_ids'  => ['required', 'array', 'min:1'],
+            'import_session_id' => ['required', 'string'],
+            'selected_external_ids' => ['required', 'array', 'min:1'],
             'selected_external_ids.*' => ['required', 'string'],
         ]);
 
-        $adminId   = Auth::id();
+        $adminId = Auth::id();
         $sessionId = $validated['import_session_id'];
         $selectedIds = array_unique($validated['selected_external_ids']);
 
@@ -156,8 +156,8 @@ class UserIntegrationController extends Controller
             'created' => 0,
             'updated' => 0,
             'skipped' => 0,
-            'failed'  => 0,
-            'errors'  => [],
+            'failed' => 0,
+            'errors' => [],
         ];
 
         DB::beginTransaction();
@@ -170,8 +170,9 @@ class UserIntegrationController extends Controller
                     $results['skipped']++;
                     $results['errors'][] = [
                         'external_id' => $externalId,
-                        'reason'      => 'Data user tidak ditemukan di session payload.',
+                        'reason' => 'Data user tidak ditemukan di session payload.',
                     ];
+
                     continue;
                 }
 
@@ -192,27 +193,27 @@ class UserIntegrationController extends Controller
                     }
 
                     IntegrationLog::create([
-                        'admin_id'    => $adminId,
-                        'source'      => 'internal_system',
-                        'action'      => 'import_store',
+                        'admin_id' => $adminId,
+                        'source' => 'internal_system',
+                        'action' => 'import_store',
                         'external_id' => $externalId,
-                        'status'      => 'success',
-                        'message'     => "User {$externalId} {$action}",
+                        'status' => 'success',
+                        'message' => "User {$externalId} {$action}",
                     ]);
                 } catch (\Throwable $e) {
                     $results['failed']++;
                     $results['errors'][] = [
                         'external_id' => $externalId,
-                        'reason'      => $e->getMessage(),
+                        'reason' => $e->getMessage(),
                     ];
 
                     IntegrationLog::create([
-                        'admin_id'    => $adminId,
-                        'source'      => 'internal_system',
-                        'action'      => 'import_store',
+                        'admin_id' => $adminId,
+                        'source' => 'internal_system',
+                        'action' => 'import_store',
                         'external_id' => $externalId,
-                        'status'      => 'failed',
-                        'message'     => $e->getMessage(),
+                        'status' => 'failed',
+                        'message' => $e->getMessage(),
                     ]);
                 }
             }
@@ -223,16 +224,16 @@ class UserIntegrationController extends Controller
 
             IntegrationLog::create([
                 'admin_id' => $adminId,
-                'source'   => 'internal_system',
-                'action'   => 'import_store',
-                'status'   => 'failed',
-                'message'  => 'Fatal error: ' . $e->getMessage(),
+                'source' => 'internal_system',
+                'action' => 'import_store',
+                'status' => 'failed',
+                'message' => 'Fatal error: '.$e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
                 'message' => 'Terjadi kesalahan saat proses import.',
-                'error'   => $e->getMessage(),
+                'error' => $e->getMessage(),
             ], 500);
         }
 
