@@ -27,10 +27,10 @@ class UserSyncService
         // Email boleh kamu buat wajib, atau kalau kosong kamu putuskan skip.
         $email = $payload['email'] ?? null;
 
-        if (! $email) {
-            // Kalau mau kamu bisa lempar exception, saya buat skip saja contoh ini.
-            return 'skipped';
-        }
+        // if (! $email) {
+        //     // Kalau mau kamu bisa lempar exception, saya buat skip saja contoh ini.
+        //     return 'skipped';
+        // }
 
         return DB::transaction(function () use ($payload, $externalId, $email) {
             // 1. Upsert user (tabel users)
@@ -41,7 +41,7 @@ class UserSyncService
                 'external_id' => $externalId,
                 'name' => $payload['full_name'] ?? $payload['name'] ?? $email,
                 'username' => $payload['username'] ?? str_replace(' ', '', $payload['full_name'] ?? $payload['name']),
-                'email' => $email,
+                'email' => $email ?? null,
                 'lms_status' => $this->mapStatus($payload['status'] ?? null),
                 'password' => isset($payload['password']) ? Hash::make($payload['password']) : Hash::make('password'),
             ];
