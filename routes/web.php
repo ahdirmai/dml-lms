@@ -59,8 +59,8 @@ Route::get('/', function () {
 });
 
 Route::match(['GET', 'POST'], '/sso/login', SsoLoginController::class)
-    ->name('sso.login')
-    ->middleware('web');
+    ->name('sso.login');
+// ->middleware('web');
 
 /*
 |--------------------------------------------------------------------------

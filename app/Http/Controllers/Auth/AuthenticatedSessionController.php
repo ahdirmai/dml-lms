@@ -22,7 +22,6 @@ class AuthenticatedSessionController extends Controller
     /**
      * Handle an incoming authentication request.
      */
-
     public function store(LoginRequest $request): RedirectResponse
     {
         // Proses autentikasi
@@ -34,10 +33,10 @@ class AuthenticatedSessionController extends Controller
 
         // Tentukan redirect berdasarkan role
         $redirect = match ($activeRole) {
-            'admin'      => route('admin.dashboard'),
+            'admin' => route('admin.dashboard'),
             'instructor' => route('instructor.dashboard'),
-            'student'    => route('user.dashboard'),
-            default      => route('dashboard'),
+            'student' => route('user.dashboard'),
+            default => route('user.dashboard'),
         };
 
         return redirect()->intended($redirect);
