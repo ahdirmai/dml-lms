@@ -75,11 +75,30 @@ class SsoLoginController extends Controller
                 abort(401, 'SSO token already used');
             }
 
-            // Optional: cek max_age manual (selain exp)
-            $maxAge = $config['max_age'] ?? 300;
+            // Ambil iat dari klaim
             $iat = $claims['iat'] ?? null;
-            if (! $iat || (time() - $iat) > $maxAge) {
-                abort(401, 'SSO token too old');
+            $currentTime = time();
+            $maxAge = $config['max_age'] ?? 300;
+
+            if ($iat) {
+                $diff = $currentTime - $iat;
+
+                // Log data untuk investigasi
+                Log::info('SSO Timing Debug:', [
+                    'iat_token' => $iat,
+                    'iat_human' => date('Y-m-d H:i:s', $iat),
+                    'server_time' => $currentTime,
+                    'server_human' => date('Y-m-d H:i:s', $currentTime),
+                    'selisih_detik' => $diff,
+                    'max_age_config' => $maxAge,
+                    'timezone_app' => config('app.timezone'),
+                ]);
+            }
+
+            // Validasi
+            if (! $iat || ($currentTime - $iat) > $maxAge) {
+                // Tambahkan info ke pesan error agar terlihat di browser (opsional untuk debug)
+                abort(401, 'SSO token too old. Selisih: '.($currentTime - $iat)."s, Max: {$maxAge}s");
             }
 
             // Simpan sebagai sudah digunakan
