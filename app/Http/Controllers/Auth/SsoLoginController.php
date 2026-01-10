@@ -26,7 +26,7 @@ class SsoLoginController extends Controller
             $algo = $config['algo'];
             $iss = $config['iss'];
             $aud = $config['aud'];
-            $leeway = $config['leeway'] ?? 5;
+            $leeway = $config['leeway'] ?? 180;
 
             JWT::$leeway = $leeway;
 
@@ -109,7 +109,7 @@ class SsoLoginController extends Controller
             // check auth, jika ada yang sedang login, logout dulu
             if (Auth::check()) {
                 Auth::logout();
-            }   
+            }
             Auth::login($user, false);
 
             $activeRole = $user->active_role ?? $user->getRoleNames()->first();
