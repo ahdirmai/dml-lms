@@ -26,7 +26,7 @@ class SsoLoginController extends Controller
             $algo = $config['algo'];
             $iss = $config['iss'];
             $aud = $config['aud'];
-            $leeway = $config['leeway'] ?? 180;
+            $leeway = $config['leeway'] ?? 300;
 
             JWT::$leeway = $leeway;
 
@@ -76,7 +76,7 @@ class SsoLoginController extends Controller
             }
 
             // Optional: cek max_age manual (selain exp)
-            $maxAge = $config['max_age'] ?? 60;
+            $maxAge = $config['max_age'] ?? 300;
             $iat = $claims['iat'] ?? null;
             if (! $iat || (time() - $iat) > $maxAge) {
                 abort(401, 'SSO token too old');

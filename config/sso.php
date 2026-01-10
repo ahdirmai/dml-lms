@@ -8,6 +8,6 @@ return [
     'iss' => env('SSO_JWT_ISS', 'internal-system'),
     'aud' => env('SSO_JWT_AUD', 'lms-system'),
 
-    'leeway' => (int) env('SSO_JWT_LEEWAY', 180),
-    'max_age' => (int) env('SSO_JWT_MAX_AGE', 180),
+    'leeway' => (int) env('SSO_JWT_LEEWAY', 300),
+    'max_age' => (int) env('SSO_JWT_MAX_AGE', 300),
 ];
