@@ -186,6 +186,7 @@ class UserCourseService
                 'modules' => $modulesData,
                 'description' => $course->description,
                 'learningObjectives' => $course->learning_objectives ?? [],
+                'thumbnail_path' => $course->thumbnail_path,
 
                 'preTest' => $preTest,
                 'postTest' => $postTest,

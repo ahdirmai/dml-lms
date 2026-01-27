@@ -43,8 +43,13 @@
                 {{-- Thumbnail --}}
                 <div
                     class="w-full md:w-56 h-36 bg-soft rounded-lg overflow-hidden flex-shrink-0 mb-4 md:mb-0 md:mr-6 relative group-hover:ring-2 group-hover:ring-brand/20 transition-all">
-                    <img src="https://placehold.co/400x300/09759A/FFFFFF?text=LMS&font=inter"
-                        alt="{{ $course['title'] }}" class="w-full h-full object-cover">
+                    @if($course['thumbnail_path'])
+                        <img src="{{ Storage::url($course['thumbnail_path']) }}" alt="{{ $course['title'] }}" class="w-full h-full object-cover">
+                    @else
+                        <div class="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100">
+                            <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        </div>
+                    @endif
                     <div class="absolute top-2 left-2 badge bg-brand text-white font-semibold text-[0.7rem] shadow-sm">
                         {{ $course['category'] }}
                     </div>
