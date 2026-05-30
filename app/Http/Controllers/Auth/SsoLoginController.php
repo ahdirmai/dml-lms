@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\UsedSsoToken;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
@@ -13,141 +12,114 @@ use Illuminate\Support\Facades\Log;
 
 class SsoLoginController extends Controller
 {
+    /**
+     * Handle SSO callback from DMLS.
+     *
+     * Flow:
+     * 1. User clicks "LMS" on the DMLS sidebar.
+     * 2. DMLS generates a signed JWT and redirects here with ?token=<JWT>.
+     * 3. We decode the JWT, find the local user, and log them in.
+     */
     public function __invoke(Request $request)
     {
-        $jwt = $request->get('token') ?? $request->post('token');
+        $token = $request->query('token') ?? $request->post('token');
 
-        if (! $jwt) {
-            abort(401, 'Missing SSO token');
+        if (! $token) {
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'No SSO token provided.']);
+        }
+
+        // Read secret directly from env — no config caching issues
+        $secretKey = env('DMLS_SSO_SECRET_KEY');
+
+        if (! $secretKey) {
+            Log::error('DMLS SSO: Secret key not configured (DMLS_SSO_SECRET_KEY).');
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'SSO is not configured. Please contact the administrator.']);
         }
 
         try {
-            $config = config('sso');
-            $algo = $config['algo'];
-            $iss = $config['iss'];
-            $aud = $config['aud'];
-            $leeway = $config['leeway'] ?? 300;
-
-            JWT::$leeway = $leeway;
-
-            //
-            // return $algo;
-            if ($algo === 'RS256') {
-                $keyMaterial = $config['public_key'];
-                if (! $keyMaterial) {
-                    throw new \RuntimeException('SSO public key not configured');
-                }
-                $key = new Key($keyMaterial, 'RS256');
-            } else {
-                // return 'x';
-                $secret = $config['secret'];
-                if (! $secret) {
-                    throw new \RuntimeException('SSO secret not configured');
-                }
-                $key = new Key($secret, 'HS256');
-            }
-
-            // Decode & verify signature + exp
-            //             dd([
-            //     'config_secret' => $secret,
-            //     'key_object' => $key
-            // ]);
-            $decoded = JWT::decode($jwt, $key);
-
-            $claims = (array) $decoded;
-            // Validasi iss & aud
-            if (($claims['iss'] ?? null) !== $iss) {
-                abort(401, 'Invalid issuer');
-            }
-
-            if (($claims['aud'] ?? null) !== $aud) {
-                abort(401, 'Invalid audience');
-            }
-
-            // Validasi jti untuk anti-replay
-            $jti = $claims['jti'] ?? null;
-            if (! $jti) {
-                abort(401, 'Missing jti');
-            }
-
-            $alreadyUsed = UsedSsoToken::where('jti', $jti)->exists();
-            if ($alreadyUsed) {
-                abort(401, 'SSO token already used');
-            }
-
-            // Ambil iat dari klaim
-            $iat = $claims['iat'] ?? null;
-            $currentTime = time();
-            $maxAge = $config['max_age'] ?? 300;
-
-            if ($iat) {
-                $diff = $currentTime - $iat;
-
-                // Log data untuk investigasi
-                Log::info('SSO Timing Debug:', [
-                    'iat_token' => $iat,
-                    'iat_human' => date('Y-m-d H:i:s', $iat),
-                    'server_time' => $currentTime,
-                    'server_human' => date('Y-m-d H:i:s', $currentTime),
-                    'selisih_detik' => $diff,
-                    'max_age_config' => $maxAge,
-                    'timezone_app' => config('app.timezone'),
-                ]);
-            }
-
-            // Validasi
-            if (! $iat || ($currentTime - $iat) > $maxAge) {
-                // Tambahkan info ke pesan error agar terlihat di browser (opsional untuk debug)
-                abort(401, 'SSO token too old. Selisih: '.($currentTime - $iat)."s, Max: {$maxAge}s");
-            }
-
-            // Simpan sebagai sudah digunakan
-            UsedSsoToken::create([
-                'jti' => $jti,
-                'used_at' => now(),
-                'ip_address' => $request->ip(),
-                'user_agent' => (string) $request->userAgent(),
-            ]);
-
-            // Ambil user berdasarkan external_id = sub
-            $externalId = $claims['sub'] ?? null;
-            if (! $externalId) {
-                abort(401, 'Missing subject');
-            }
-
-            /** @var User|null $user */
-            $user = User::where('external_id', $externalId)->first();
-
-            if (! $user) {
-                // Bisa pilih: auto-provision atau tolak.
-                // Untuk aman, tolak dulu.
-                abort(403, 'User not provisioned in LMS');
-            }
-
-            // Login user ke LMS
-            // check auth, jika ada yang sedang login, logout dulu
-            if (Auth::check()) {
-                Auth::logout();
-            }
-            Auth::login($user, false);
-
-            $activeRole = $user->active_role ?? $user->getRoleNames()->first();
-            // Redirect ke dashboard atau route yang kamu mau
-            $redirect = match ($activeRole) {
-                'admin' => route('admin.dashboard'),
-                'instructor' => route('instructor.dashboard'),
-                'student' => route('user.dashboard'),
-                default => route('user.dashboard'),
-            };
-
-            return redirect()->intended($redirect);
-        } catch (\Throwable $e) {
-            Log::warning('SSO JWT failed', [
-                'error' => $e->getMessage(),
-            ]);
-
-            // return $e->getMessage();
-            abort(401, 'Invalid SSO token');
+            // Allow 60 seconds of clock skew between DMLS and LMS servers
+            JWT::$leeway = 60;
+            $decoded = JWT::decode($token, new Key($secretKey, 'HS256'));
+        } catch (\Firebase\JWT\ExpiredException $e) {
+            Log::warning('DMLS SSO: Token has expired.', ['error' => $e->getMessage()]);
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'SSO token has expired. Please try again from DMLS.']);
+        } catch (\Exception $e) {
+            Log::warning('DMLS SSO: Token validation failed.', ['error' => $e->getMessage()]);
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'Invalid SSO token. Please try again from DMLS.']);
         }
+
+        // Extract user data from JWT payload
+        $username   = $decoded->username ?? null;
+        $email      = $decoded->email    ?? null;
+        $name       = $decoded->name     ?? null;
+        $externalId = $decoded->sub      ?? null;
+
+        if (! $username && ! $email && ! $externalId) {
+            Log::warning('DMLS SSO: JWT payload missing user identifiers.', [
+                'payload' => (array) $decoded,
+            ]);
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'Insufficient user data in SSO token.']);
+        }
+
+        // Find user: try username → email → external_id (sub)
+        $user = null;
+
+        if ($username) {
+            $user = User::where('username', $username)->first();
+        }
+
+        if (! $user && $email) {
+            $user = User::where('email', $email)->first();
+        }
+
+        if (! $user && $externalId) {
+            $user = User::where('external_id', $externalId)->first();
+        }
+
+        if (! $user) {
+            Log::warning('DMLS SSO: No matching LMS account found.', [
+                'username'    => $username,
+                'email'       => $email,
+                'external_id' => $externalId,
+            ]);
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'Your account has not been added to the LMS yet. Please contact the administrator.']);
+        }
+
+        // Check if user is active
+        if (! $user->isActive()) {
+            return redirect()->route('login')
+                ->withErrors(['sso' => 'Your account is inactive. Please contact the administrator.']);
+        }
+
+        // Log the user in
+        if (Auth::check()) {
+            Auth::logout();
+        }
+
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        Log::info('DMLS SSO: User logged in.', [
+            'user_id'  => $user->id,
+            'username' => $user->username,
+            'email'    => $user->email,
+        ]);
+
+        $activeRole = $user->active_role ?? $user->getRoleNames()->first();
+
+        $redirect = match ($activeRole) {
+            'admin'      => route('admin.dashboard'),
+            'instructor' => route('instructor.dashboard'),
+            'student'    => route('user.dashboard'),
+            default      => route('user.dashboard'),
+        };
+
+        return redirect()->intended($redirect);
     }
 }
