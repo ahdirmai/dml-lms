@@ -1,13 +1,7 @@
 <?php
 
-return [
-    'algo' => env('SSO_JWT_ALGO', 'HS256'),
-    'secret' => env('SSO_JWT_SECRET'),
-    'public_key' => env('SSO_JWT_PUBLIC_KEY'), // kalau pakai RS256
+// This config is no longer used by SsoLoginController.
+// SSO secret is read directly via env('DMLS_SSO_SECRET_KEY') in the controller,
+// matching the same pattern as hsse-monitoring.
 
-    'iss' => env('SSO_JWT_ISS', 'internal-system'),
-    'aud' => env('SSO_JWT_AUD', 'lms-system'),
-
-    'leeway' => (int) env('SSO_JWT_LEEWAY', 300),
-    'max_age' => (int) env('SSO_JWT_MAX_AGE', 300),
-];
+return [];
