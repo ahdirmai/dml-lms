@@ -36,8 +36,8 @@ return [
     ],
 
     'internal_users' => [
-        'base_url' => env('INTERNAL_USERS_BASE_URL', 'https://devops2.dutabahari.com/dmls/api/v1'),
-        'token'    => env('INTERNAL_USERS_TOKEN'),
+        'base_url' => env('INTERNAL_USERS_BASE_URL', 'https://devops2.dutabahari.com/dmls'),
+        'token' => env('INTERNAL_USERS_TOKEN'),
     ],
 
     'whatsapp' => [

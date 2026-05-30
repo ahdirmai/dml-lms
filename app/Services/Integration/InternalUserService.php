@@ -39,7 +39,7 @@ class InternalUserService
             'department' => $filters['department'] ?? null,
             'status' => $filters['status'] ?? null,
             'limit' => $filters['limit'] ?? 100,
-        ], fn ($v) => ! is_null($v));
+        ], fn($v) => !is_null($v));
 
         try {
             $request = Http::acceptJson();
@@ -52,9 +52,9 @@ class InternalUserService
             }
 
             // DMLS endpoint: GET /api/v1/users
-            $response = $request->get($this->baseUrl.'/users', $query);
+            $response = $request->get($this->baseUrl . '/api/v1/users', $query);
 
-            if (! $response->successful()) {
+            if (!$response->successful()) {
                 Log::warning('InternalUserService: gagal fetch users dari DMLS API', [
                     'status' => $response->status(),
                     'body' => $response->body(),
@@ -68,13 +68,13 @@ class InternalUserService
             // Response structure: { data: [ { id_user, name_user, email_user, status_user, department, ... } ] }
             $rawUsers = $json['data'] ?? [];
 
-            if (! is_array($rawUsers)) {
+            if (!is_array($rawUsers)) {
                 return [];
             }
 
             // Normalisasi ke struktur standar yang dipakai seluruh aplikasi LMS
             return array_values(array_map(
-                fn (array $record) => $this->mapExternalUserRecord($record),
+                fn(array $record) => $this->mapExternalUserRecord($record),
                 $rawUsers
             ));
         } catch (\Throwable $e) {
