@@ -18,6 +18,7 @@ class UserSeeder extends Seeder
             ['email' => 'admin@dml-lms.test'],
             [
                 'name' => 'Super Admin',
+                'username' => 'superadmin',
                 'password' => Hash::make('password'), // ganti sesuai kebutuhan
                 'email_verified_at' => now(),
             ]
